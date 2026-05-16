@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -76,7 +77,7 @@ public sealed class ResxI18nGenerator : IIncrementalGenerator
                 .Cast<string>()
                 .ToArray() ?? Array.Empty<string>();
         }
-        catch
+        catch (XmlException)
         {
             return Array.Empty<string>();
         }

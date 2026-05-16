@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using System.Xml;
 
 namespace Irihi.Lolita.Core;
 
@@ -38,7 +39,7 @@ public static class ResxResourceParser
 
             return new ResxResource(resourceName, keys);
         }
-        catch
+        catch (XmlException)
         {
             return new ResxResource(resourceName, Array.Empty<string>());
         }
