@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/benchmark/" />
+  <Folder Name="/demo/">
+    <Project Path="demo/Irihi.Lolita.Demo/Irihi.Lolita.Demo.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Irihi.Lolita.Core/Irihi.Lolita.Core.csproj" />
+    <Project Path="src/Irihi.Lolita.Generator/Irihi.Lolita.Generator.csproj" />
+  </Folder>
+  <Folder Name="/test/" />
+</Solution>
