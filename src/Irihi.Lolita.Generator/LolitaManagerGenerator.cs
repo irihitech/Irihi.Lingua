@@ -16,8 +16,10 @@ namespace Irihi.Lolita.Generator;
 /// Incremental source generator for <c>[LolitaManager]</c>-annotated classes.
 /// For each such static partial class the generator produces:
 /// <list type="bullet">
+///   <item>A nested <c>Keys</c> static class with a <c>const string</c> for every resource key.</item>
 ///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> backing field.</item>
 ///   <item>A public <c>IObservable&lt;string&gt;</c> property for every resource key.</item>
+///   <item>An <c>_lolita_observables</c> array containing all observable instances for iteration.</item>
 ///   <item>An <c>UpdateCulture(CultureInfo)</c> method that pushes new values to all observables.</item>
 ///   <item>An internal resource dictionary covering every discovered culture variant.</item>
 /// </list>
@@ -252,12 +254,34 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        };");
         sb.AppendLine();
 
+        // ── Keys nested class ────────────────────────────────────────────────
+        sb.AppendLine("    /// <summary>Provides strongly-typed constants for each resource key.</summary>");
+        sb.AppendLine("    public static class Keys");
+        sb.AppendLine("    {");
+
+        var usedIdentifiers = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var key in keys)
+        {
+            var identifier = SanitizeIdentifier(key);
+            if (!usedIdentifiers.Add(identifier))
+            {
+                continue;
+            }
+
+            sb.AppendLine($"        /// <summary>Resource key constant for <c>{EscapeXmlComment(key)}</c>.</summary>");
+            sb.AppendLine($"        public const string {identifier} = \"{EscapeString(key)}\";");
+        }
+
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
         // ── Observable backing fields and public properties ──────────────────
         var defaultValues = cultureData.TryGetValue(string.Empty, out var dv)
             ? dv
             : new Dictionary<string, string>();
 
-        var usedIdentifiers = new HashSet<string>(StringComparer.Ordinal);
+        usedIdentifiers.Clear();
 
         foreach (var key in keys)
         {
@@ -271,12 +295,32 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             defaultValue ??= string.Empty;
 
             sb.AppendLine($"    private static readonly global::Irihi.Lolita.LolitaObservableString _lolita_{identifier} =");
-            sb.AppendLine($"        new global::Irihi.Lolita.LolitaObservableString(@\"{EscapeVerbatimString(defaultValue)}\");");
+            sb.AppendLine($"        new global::Irihi.Lolita.LolitaObservableString(Keys.{identifier}, @\"{EscapeVerbatimString(defaultValue)}\");");
             sb.AppendLine();
             sb.AppendLine($"    /// <summary>Gets an observable that emits the current value of the <c>{EscapeXmlComment(key)}</c> resource key.</summary>");
             sb.AppendLine($"    public static global::System.IObservable<string> {identifier} => _lolita_{identifier};");
             sb.AppendLine();
         }
+
+        // ── Observable collection ────────────────────────────────────────────
+        sb.AppendLine("    private static readonly global::Irihi.Lolita.LolitaObservableString[] _lolita_observables =");
+        sb.AppendLine("        new global::Irihi.Lolita.LolitaObservableString[]");
+        sb.AppendLine("        {");
+
+        usedIdentifiers.Clear();
+        foreach (var key in keys)
+        {
+            var identifier = SanitizeIdentifier(key);
+            if (!usedIdentifiers.Add(identifier))
+            {
+                continue;
+            }
+
+            sb.AppendLine($"            _lolita_{identifier},");
+        }
+
+        sb.AppendLine("        };");
+        sb.AppendLine();
 
         // ── UpdateCulture method ─────────────────────────────────────────────
         sb.AppendLine("    /// <summary>");
@@ -304,20 +348,11 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("            return;");
         sb.AppendLine("        }");
         sb.AppendLine();
-
-        usedIdentifiers.Clear();
-        foreach (var key in keys)
-        {
-            var identifier = SanitizeIdentifier(key);
-            if (!usedIdentifiers.Add(identifier))
-            {
-                continue;
-            }
-
-            sb.AppendLine($"        if (dict.TryGetValue(\"{EscapeString(key)}\", out var lolita_v_{identifier}))");
-            sb.AppendLine($"            _lolita_{identifier}.OnNext(lolita_v_{identifier});");
-        }
-
+        sb.AppendLine("        foreach (var _lolita_obs in _lolita_observables)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            if (dict.TryGetValue(_lolita_obs.Key, out var _lolita_v))");
+        sb.AppendLine("                _lolita_obs.OnNext(_lolita_v);");
+        sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("}");
 

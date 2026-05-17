@@ -20,6 +20,11 @@ public sealed class LolitaObservableString : IObservable<string>
     private string _currentValue;
 
     /// <summary>
+    /// Gets the resource key that this observable string represents.
+    /// </summary>
+    public string Key { get; }
+
+    /// <summary>
     /// Gets the most recently emitted value.
     /// </summary>
     public string CurrentValue
@@ -34,11 +39,19 @@ public sealed class LolitaObservableString : IObservable<string>
     }
 
     /// <summary>
-    /// Initializes a new instance of <see cref="LolitaObservableString"/> with the given initial value.
+    /// Initializes a new instance of <see cref="LolitaObservableString"/> with the given key and initial value.
     /// </summary>
+    /// <param name="key">The resource key that this observable represents.</param>
     /// <param name="initialValue">The value to emit to new subscribers immediately.</param>
-    public LolitaObservableString(string initialValue)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="key"/> is <c>null</c>.</exception>
+    public LolitaObservableString(string key, string initialValue)
     {
+        if (key is null)
+        {
+            throw new ArgumentNullException(nameof(key));
+        }
+
+        Key = key;
         _currentValue = initialValue ?? string.Empty;
     }
 
