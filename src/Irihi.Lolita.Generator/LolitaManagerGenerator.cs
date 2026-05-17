@@ -16,7 +16,8 @@ namespace Irihi.Lolita.Generator;
 /// Incremental source generator for <c>[LolitaManager]</c>-annotated classes.
 /// For each such static partial class the generator produces:
 /// <list type="bullet">
-///   <item>A nested <c>Keys</c> static class with a <c>const string</c> for every resource key.</item>
+///   <item>A nested <c>Keys</c> static class with a <see cref="Irihi.Lolita.LolitaKey"/> for every resource key.</item>
+///   <item>A public <c>Current</c> static field implementing <see cref="Irihi.Lolita.ILolitaManager"/>.</item>
 ///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> backing field.</item>
 ///   <item>A public <c>IObservable&lt;string&gt;</c> property for every resource key.</item>
 ///   <item>A <c>_lolita_observables</c> dictionary (key → observable) containing all observable instances for iteration and lookup.</item>
@@ -254,8 +255,20 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        };");
         sb.AppendLine();
 
+        // ── ILolitaManager adapter ───────────────────────────────────────────
+        sb.AppendLine("    private sealed class _LolitaManagerImpl : global::Irihi.Lolita.ILolitaManager");
+        sb.AppendLine("    {");
+        sb.AppendLine("        // Null culture is handled by the static UpdateCulture method (treats null as InvariantCulture).");
+        sb.AppendLine("        public void UpdateCulture(global::System.Globalization.CultureInfo culture)");
+        sb.AppendLine($"            => {info.ClassName}.UpdateCulture(culture);");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>Gets an <see cref=\"global::Irihi.Lolita.ILolitaManager\"/> instance for this manager.</summary>");
+        sb.AppendLine("    public static readonly global::Irihi.Lolita.ILolitaManager Current = new _LolitaManagerImpl();");
+        sb.AppendLine();
+
         // ── Keys nested class ────────────────────────────────────────────────
-        sb.AppendLine("    /// <summary>Provides strongly-typed constants for each resource key.</summary>");
+        sb.AppendLine("    /// <summary>Provides strongly-typed <see cref=\"global::Irihi.Lolita.LolitaKey\"/> members for each resource key.</summary>");
         sb.AppendLine("    public static class Keys");
         sb.AppendLine("    {");
 
@@ -269,8 +282,9 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
                 continue;
             }
 
-            sb.AppendLine($"        /// <summary>Resource key constant for <c>{EscapeXmlComment(key)}</c>.</summary>");
-            sb.AppendLine($"        public const string {identifier} = \"{EscapeString(key)}\";");
+            sb.AppendLine($"        /// <summary>Resource key for <c>{EscapeXmlComment(key)}</c>.</summary>");
+            sb.AppendLine($"        public static readonly global::Irihi.Lolita.LolitaKey {identifier} =");
+            sb.AppendLine($"            new global::Irihi.Lolita.LolitaKey(\"{EscapeString(key)}\", {info.ClassName}.Current);");
         }
 
         sb.AppendLine("    }");
@@ -295,7 +309,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             defaultValue ??= string.Empty;
 
             sb.AppendLine($"    private static readonly global::Irihi.Lolita.LolitaObservableString _lolita_{identifier} =");
-            sb.AppendLine($"        new global::Irihi.Lolita.LolitaObservableString(Keys.{identifier}, @\"{EscapeVerbatimString(defaultValue)}\");");
+            sb.AppendLine($"        new global::Irihi.Lolita.LolitaObservableString(\"{EscapeString(key)}\", @\"{EscapeVerbatimString(defaultValue)}\");");
             sb.AppendLine();
             sb.AppendLine($"    /// <summary>Gets an observable that emits the current value of the <c>{EscapeXmlComment(key)}</c> resource key.</summary>");
             sb.AppendLine($"    public static global::System.IObservable<string> {identifier} => _lolita_{identifier};");
@@ -316,7 +330,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
                 continue;
             }
 
-            sb.AppendLine($"            [Keys.{identifier}] = _lolita_{identifier},");
+            sb.AppendLine($"            [\"{EscapeString(key)}\"] = _lolita_{identifier},");
         }
 
         sb.AppendLine("        };");
