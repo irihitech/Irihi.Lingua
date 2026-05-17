@@ -3,20 +3,25 @@ using System;
 namespace Irihi.Lolita;
 
 /// <summary>
-/// Marks a static partial class for i18n code generation.
-/// The source generator will populate the class with <see cref="System.IObservable{T}"/>
-/// properties for each resource key and an <c>UpdateCulture</c> method.
+/// Marks a partial class for i18n code generation as a singleton.
+/// The source generator will populate the class with a static <c>Instance</c>
+/// property, <see cref="System.IObservable{T}"/> instance properties for each
+/// resource key, and a static <c>UpdateCulture</c> method.
 /// </summary>
 /// <remarks>
-/// Apply this attribute to a <c>static partial class</c> and provide the relative path
+/// Apply this attribute to a <c>partial class</c> (not static) and provide the relative path
 /// to the base <c>.resx</c> file.  Culture-specific variants (e.g.
 /// <c>Strings.zh-Hans.resx</c>) placed alongside the base file and included as
 /// <c>AdditionalFiles</c> in the project are picked up automatically.
+/// <para>
+/// The generated <c>Instance</c> singleton can be used for direct XAML bindings,
+/// for example in Avalonia via <c>{x:Static local:LanguageManager.Instance}</c>.
+/// </para>
 /// </remarks>
 /// <example>
 /// <code>
 /// [LolitaManager("./Resources/Strings.resx")]
-/// public static partial class LanguageManager { }
+/// public partial class LanguageManager { }
 /// </code>
 /// </example>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

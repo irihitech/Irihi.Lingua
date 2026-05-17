@@ -7,6 +7,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -14,11 +15,12 @@ namespace Irihi.Lolita.Generator;
 
 /// <summary>
 /// Incremental source generator for <c>[LolitaManager]</c>-annotated classes.
-/// For each such static partial class the generator produces:
+/// For each such partial class the generator produces a singleton with:
 /// <list type="bullet">
-///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> backing field.</item>
-///   <item>A public <c>IObservable&lt;string&gt;</c> property for every resource key.</item>
-///   <item>An <c>UpdateCulture(CultureInfo)</c> method that pushes new values to all observables.</item>
+///   <item>A public static <c>Instance</c> property returning the singleton.</item>
+///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> instance backing field.</item>
+///   <item>A public <c>IObservable&lt;string&gt;</c> instance property for every resource key.</item>
+///   <item>A static <c>UpdateCulture(CultureInfo)</c> method that pushes new values to all observables.</item>
 ///   <item>An internal resource dictionary covering every discovered culture variant.</item>
 /// </list>
 /// </summary>
@@ -32,7 +34,8 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         var managedClasses = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 AttributeFullName,
-                predicate: static (node, _) => node is ClassDeclarationSyntax,
+                predicate: static (node, _) => node is ClassDeclarationSyntax cls
+                    && !cls.Modifiers.Any(SyntaxKind.StaticKeyword),
                 transform: static (ctx, _) => ExtractManagerInfo(ctx))
             .Where(static info => info != null);
 
@@ -225,8 +228,14 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             sb.AppendLine();
         }
 
-        sb.AppendLine($"public static partial class {info.ClassName}");
+        sb.AppendLine($"public partial class {info.ClassName}");
         sb.AppendLine("{");
+
+        // ── Singleton instance ───────────────────────────────────────────────
+        sb.AppendLine($"    public static {info.ClassName} Instance {{ get; }} = new {info.ClassName}();");
+        sb.AppendLine();
+        sb.AppendLine($"    private {info.ClassName}() {{ }}");
+        sb.AppendLine();
 
         // ── Resource storage dictionary ──────────────────────────────────────
         sb.AppendLine("    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Dictionary<string, string>> _lolita_resources =");
@@ -270,11 +279,11 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             defaultValues.TryGetValue(key, out var defaultValue);
             defaultValue ??= string.Empty;
 
-            sb.AppendLine($"    private static readonly global::Irihi.Lolita.LolitaObservableString _lolita_{identifier} =");
+            sb.AppendLine($"    private readonly global::Irihi.Lolita.LolitaObservableString _lolita_{identifier} =");
             sb.AppendLine($"        new global::Irihi.Lolita.LolitaObservableString(@\"{EscapeVerbatimString(defaultValue)}\");");
             sb.AppendLine();
             sb.AppendLine($"    /// <summary>Gets an observable that emits the current value of the <c>{EscapeXmlComment(key)}</c> resource key.</summary>");
-            sb.AppendLine($"    public static global::System.IObservable<string> {identifier} => _lolita_{identifier};");
+            sb.AppendLine($"    public global::System.IObservable<string> {identifier} => _lolita_{identifier};");
             sb.AppendLine();
         }
 
@@ -315,7 +324,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             }
 
             sb.AppendLine($"        if (dict.TryGetValue(\"{EscapeString(key)}\", out var lolita_v_{identifier}))");
-            sb.AppendLine($"            _lolita_{identifier}.OnNext(lolita_v_{identifier});");
+            sb.AppendLine($"            Instance._lolita_{identifier}.OnNext(lolita_v_{identifier});");
         }
 
         sb.AppendLine("    }");
