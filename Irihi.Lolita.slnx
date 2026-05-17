@@ -2,6 +2,7 @@
   <Folder Name="/benchmark/" />
   <Folder Name="/demo/">
     <Project Path="demo/Irihi.Lolita.Demo/Irihi.Lolita.Demo.csproj" />
+    <Project Path="demo/Irihi.Lolita.AvaloniaDemo/Irihi.Lolita.AvaloniaDemo.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Irihi.Lolita.Core/Irihi.Lolita.Core.csproj" />
