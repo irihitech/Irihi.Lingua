@@ -19,7 +19,7 @@ namespace Irihi.Lolita.Generator;
 ///   <item>A nested <c>Keys</c> static class with a <c>const string</c> for every resource key.</item>
 ///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> backing field.</item>
 ///   <item>A public <c>IObservable&lt;string&gt;</c> property for every resource key.</item>
-///   <item>An <c>_lolita_observables</c> array containing all observable instances for iteration.</item>
+///   <item>A <c>_lolita_observables</c> dictionary (key → observable) containing all observable instances for iteration and lookup.</item>
 ///   <item>An <c>UpdateCulture(CultureInfo)</c> method that pushes new values to all observables.</item>
 ///   <item>An internal resource dictionary covering every discovered culture variant.</item>
 /// </list>
@@ -303,8 +303,8 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         }
 
         // ── Observable collection ────────────────────────────────────────────
-        sb.AppendLine("    private static readonly global::Irihi.Lolita.LolitaObservableString[] _lolita_observables =");
-        sb.AppendLine("        new global::Irihi.Lolita.LolitaObservableString[]");
+        sb.AppendLine("    private static readonly global::System.Collections.Generic.Dictionary<string, global::Irihi.Lolita.LolitaObservableString> _lolita_observables =");
+        sb.AppendLine("        new global::System.Collections.Generic.Dictionary<string, global::Irihi.Lolita.LolitaObservableString>()");
         sb.AppendLine("        {");
 
         usedIdentifiers.Clear();
@@ -316,7 +316,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
                 continue;
             }
 
-            sb.AppendLine($"            _lolita_{identifier},");
+            sb.AppendLine($"            [Keys.{identifier}] = _lolita_{identifier},");
         }
 
         sb.AppendLine("        };");
@@ -348,7 +348,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("            return;");
         sb.AppendLine("        }");
         sb.AppendLine();
-        sb.AppendLine("        foreach (var _lolita_obs in _lolita_observables)");
+        sb.AppendLine("        foreach (var _lolita_obs in _lolita_observables.Values)");
         sb.AppendLine("        {");
         sb.AppendLine("            if (dict.TryGetValue(_lolita_obs.Key, out var _lolita_v))");
         sb.AppendLine("                _lolita_obs.OnNext(_lolita_v);");
