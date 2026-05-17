@@ -15,10 +15,10 @@ using var greetingSub = LanguageManager.Instance.Greeting_Message.Subscribe(
 
 // Switch to Simplified Chinese
 Console.WriteLine("\n--- UpdateCulture(zh-Hans) ---");
-LanguageManager.UpdateCulture(new CultureInfo("zh-Hans"));
+LanguageManager.Instance.UpdateCulture(new CultureInfo("zh-Hans"));
 
 // Switch back to the invariant / default culture
 Console.WriteLine("\n--- UpdateCulture(InvariantCulture) ---");
-LanguageManager.UpdateCulture(CultureInfo.InvariantCulture);
+LanguageManager.Instance.UpdateCulture(CultureInfo.InvariantCulture);
 
 Console.WriteLine("\nDone.");

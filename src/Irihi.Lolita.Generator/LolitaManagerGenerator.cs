@@ -292,7 +292,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("    /// Switches all observable properties to the values for <paramref name=\"culture\"/>.");
         sb.AppendLine("    /// Falls back to the parent culture, then to the default (invariant) culture.");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public static void UpdateCulture(global::System.Globalization.CultureInfo culture)");
+        sb.AppendLine("    public void UpdateCulture(global::System.Globalization.CultureInfo culture)");
         sb.AppendLine("    {");
         sb.AppendLine("        if (culture is null)");
         sb.AppendLine("        {");
@@ -324,7 +324,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             }
 
             sb.AppendLine($"        if (dict.TryGetValue(\"{EscapeString(key)}\", out var lolita_v_{identifier}))");
-            sb.AppendLine($"            Instance._lolita_{identifier}.OnNext(lolita_v_{identifier});");
+            sb.AppendLine($"            _lolita_{identifier}.OnNext(lolita_v_{identifier});");
         }
 
         sb.AppendLine("    }");

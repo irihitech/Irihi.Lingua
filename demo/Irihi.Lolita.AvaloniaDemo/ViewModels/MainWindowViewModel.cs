@@ -43,7 +43,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void ToggleCulture()
     {
         _isChinese = !_isChinese;
-        LanguageManager.UpdateCulture(
+        LanguageManager.Instance.UpdateCulture(
             _isChinese
                 ? new CultureInfo("zh-Hans")
                 : CultureInfo.InvariantCulture);
