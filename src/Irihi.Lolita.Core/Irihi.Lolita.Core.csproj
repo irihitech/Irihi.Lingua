@@ -4,5 +4,40 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet package metadata -->
+    <PackageId>Irihi.Lolita</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>rabbitism</Authors>
+    <Description>Source generator package for generating i18n facilities for Avalonia projects from .resx files.</Description>
+    <PackageTags>source-generator;i18n;avalonia;resx</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/rabbitism/Irihi.Lolita</RepositoryUrl>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the generator to make it available as an analyzer and embed it in the NuGet package -->
+    <ProjectReference Include="..\Irihi.Lolita.Generator\Irihi.Lolita.Generator.csproj"
+                      PrivateAssets="all"
+                      ReferenceOutputAssembly="false"
+                      OutputItemType="Analyzer" />
+  </ItemGroup>
+
+  <!-- Pack the source generator DLL into the analyzers folder of the NuGet package -->
+  <Target Name="IncludeSourceGeneratorInPackage"
+          BeforeTargets="_GetPackageFiles"
+          DependsOnTargets="ResolveReferences">
+    <ItemGroup>
+      <None Include="@(Analyzer)"
+            Pack="true"
+            PackagePath="analyzers/dotnet/cs"
+            Visible="false" />
+    </ItemGroup>
+  </Target>
 </Project>

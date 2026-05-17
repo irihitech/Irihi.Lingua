@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <AdditionalFiles Include="Resources\Strings.resx" />
+    <ProjectReference Include="..\..\src\Irihi.Lolita.Core\Irihi.Lolita.Core.csproj" />
     <ProjectReference Include="..\..\src\Irihi.Lolita.Generator\Irihi.Lolita.Generator.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
