@@ -14,13 +14,14 @@ namespace Irihi.Lolita.Generator;
 
 /// <summary>
 /// Incremental source generator for <c>[LolitaManager]</c>-annotated classes.
-/// For each such static partial class the generator produces:
+/// For each such partial class the generator produces:
 /// <list type="bullet">
-///   <item>A nested <c>Keys</c> static class with a <c>const string</c> for every resource key.</item>
-///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> backing field.</item>
-///   <item>A public <c>IObservable&lt;string&gt;</c> property for every resource key.</item>
-///   <item>A <c>_lolita_observables</c> dictionary (key → observable) containing all observable instances for iteration and lookup.</item>
-///   <item>An <c>UpdateCulture(CultureInfo)</c> method that pushes new values to all observables.</item>
+///   <item>A private constructor and a <c>public static readonly ILolitaManager Instance</c> singleton.</item>
+///   <item>A nested <c>Keys</c> static class with a <c>public static readonly LolitaKey</c> for every resource key.</item>
+///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> instance backing field.</item>
+///   <item>A public instance <c>IObservable&lt;string&gt;</c> property for every resource key.</item>
+///   <item>A <c>_lolita_observables</c> dictionary (key → observable) initialized in the constructor.</item>
+///   <item>An instance <c>UpdateCulture(CultureInfo)</c> method implementing <see cref="Irihi.Lolita.ILolitaManager"/>.</item>
 ///   <item>An internal resource dictionary covering every discovered culture variant.</item>
 /// </list>
 /// </summary>
@@ -227,8 +228,38 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             sb.AppendLine();
         }
 
-        sb.AppendLine($"public static partial class {info.ClassName}");
+        sb.AppendLine($"public partial class {info.ClassName} : global::Irihi.Lolita.ILolitaManager");
         sb.AppendLine("{");
+
+        // ── Private constructor ──────────────────────────────────────────────
+        sb.AppendLine($"    private {info.ClassName}()");
+        sb.AppendLine("    {");
+
+        // Observable collection initialised inside the constructor so that
+        // instance fields (_lolita_<id>) are available.
+        sb.AppendLine("        _lolita_observables = new global::System.Collections.Generic.Dictionary<string, global::Irihi.Lolita.LolitaObservableString>()");
+        sb.AppendLine("        {");
+
+        var usedIdentifiers = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var key in keys)
+        {
+            var identifier = SanitizeIdentifier(key);
+            if (!usedIdentifiers.Add(identifier))
+            {
+                continue;
+            }
+
+            sb.AppendLine($"            [\"{EscapeString(key)}\"] = _lolita_{identifier},");
+        }
+
+        sb.AppendLine("        };");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        // ── Singleton instance ───────────────────────────────────────────────
+        sb.AppendLine("    /// <summary>Gets the singleton instance of this manager.</summary>");
+        sb.AppendLine($"    public static readonly {info.ClassName} Instance = new {info.ClassName}();");
+        sb.AppendLine();
 
         // ── Resource storage dictionary ──────────────────────────────────────
         sb.AppendLine("    private static readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyDictionary<string, string>> _lolita_resources =");
@@ -255,11 +286,17 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine();
 
         // ── Keys nested class ────────────────────────────────────────────────
-        sb.AppendLine("    /// <summary>Provides strongly-typed constants for each resource key.</summary>");
+        // NOTE: Keys is a nested type with its own lazy static initializer.
+        // C# guarantees that LanguageManager's type initializer (which sets
+        // Instance) runs before Keys's type initializer, because Keys is only
+        // initialized when first accessed, which cannot happen before the outer
+        // type is initialized.  The constructor of LanguageManager does NOT
+        // reference Keys, so there is no circular initialization.
+        sb.AppendLine("    /// <summary>Provides strongly-typed <see cref=\"global::Irihi.Lolita.LolitaKey\"/> members for each resource key.</summary>");
         sb.AppendLine("    public static class Keys");
         sb.AppendLine("    {");
 
-        var usedIdentifiers = new HashSet<string>(StringComparer.Ordinal);
+        usedIdentifiers.Clear();
 
         foreach (var key in keys)
         {
@@ -269,14 +306,15 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
                 continue;
             }
 
-            sb.AppendLine($"        /// <summary>Resource key constant for <c>{EscapeXmlComment(key)}</c>.</summary>");
-            sb.AppendLine($"        public const string {identifier} = \"{EscapeString(key)}\";");
+            sb.AppendLine($"        /// <summary>Key for the <c>{EscapeXmlComment(key)}</c> resource.</summary>");
+            sb.AppendLine($"        public static readonly global::Irihi.Lolita.LolitaKey {identifier} =");
+            sb.AppendLine($"            new global::Irihi.Lolita.LolitaKey(\"{EscapeString(key)}\", Instance);");
         }
 
         sb.AppendLine("    }");
         sb.AppendLine();
 
-        // ── Observable backing fields and public properties ──────────────────
+        // ── Observable backing fields and public instance properties ─────────
         var defaultValues = cultureData.TryGetValue(string.Empty, out var dv)
             ? dv
             : new Dictionary<string, string>();
@@ -294,40 +332,24 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             defaultValues.TryGetValue(key, out var defaultValue);
             defaultValue ??= string.Empty;
 
-            sb.AppendLine($"    private static readonly global::Irihi.Lolita.LolitaObservableString _lolita_{identifier} =");
-            sb.AppendLine($"        new global::Irihi.Lolita.LolitaObservableString(Keys.{identifier}, @\"{EscapeVerbatimString(defaultValue)}\");");
+            sb.AppendLine($"    private readonly global::Irihi.Lolita.LolitaObservableString _lolita_{identifier} =");
+            sb.AppendLine($"        new global::Irihi.Lolita.LolitaObservableString(\"{EscapeString(key)}\", @\"{EscapeVerbatimString(defaultValue)}\");");
             sb.AppendLine();
             sb.AppendLine($"    /// <summary>Gets an observable that emits the current value of the <c>{EscapeXmlComment(key)}</c> resource key.</summary>");
-            sb.AppendLine($"    public static global::System.IObservable<string> {identifier} => _lolita_{identifier};");
+            sb.AppendLine($"    public global::System.IObservable<string> {identifier} => _lolita_{identifier};");
             sb.AppendLine();
         }
 
-        // ── Observable collection ────────────────────────────────────────────
-        sb.AppendLine("    private static readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::Irihi.Lolita.LolitaObservableString> _lolita_observables =");
-        sb.AppendLine("        new global::System.Collections.Generic.Dictionary<string, global::Irihi.Lolita.LolitaObservableString>()");
-        sb.AppendLine("        {");
-
-        usedIdentifiers.Clear();
-        foreach (var key in keys)
-        {
-            var identifier = SanitizeIdentifier(key);
-            if (!usedIdentifiers.Add(identifier))
-            {
-                continue;
-            }
-
-            sb.AppendLine($"            [Keys.{identifier}] = _lolita_{identifier},");
-        }
-
-        sb.AppendLine("        };");
+        // ── Observable collection field (assigned in constructor) ────────────
+        sb.AppendLine("    private readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::Irihi.Lolita.LolitaObservableString> _lolita_observables;");
         sb.AppendLine();
 
-        // ── UpdateCulture method ─────────────────────────────────────────────
+        // ── UpdateCulture method (implements ILolitaManager) ─────────────────
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// Switches all observable properties to the values for <paramref name=\"culture\"/>.");
         sb.AppendLine("    /// Falls back to the parent culture, then to the default (invariant) culture.");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public static void UpdateCulture(global::System.Globalization.CultureInfo culture)");
+        sb.AppendLine("    public void UpdateCulture(global::System.Globalization.CultureInfo culture)");
         sb.AppendLine("    {");
         sb.AppendLine("        if (culture is null)");
         sb.AppendLine("        {");

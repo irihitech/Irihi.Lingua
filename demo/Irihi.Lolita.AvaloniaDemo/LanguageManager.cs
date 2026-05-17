@@ -8,4 +8,4 @@ namespace Irihi.Lolita.AvaloniaDemo;
 /// observable string properties as well as the <c>UpdateCulture</c> method.
 /// </summary>
 [LolitaManager("./Resources/Strings.resx")]
-public static partial class LanguageManager { }
+public partial class LanguageManager { }
