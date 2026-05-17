@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="Resources\Strings.resx" />
+    <AdditionalFiles Include="Resources\Strings.zh-Hans.resx" />
+    <ProjectReference Include="..\..\src\Irihi.Lolita.Core\Irihi.Lolita.Core.csproj" />
+    <ProjectReference Include="..\..\src\Irihi.Lolita.Generator\Irihi.Lolita.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+  </ItemGroup>
+</Project>

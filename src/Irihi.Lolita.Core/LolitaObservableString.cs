@@ -108,7 +108,11 @@ public sealed class LolitaObservableString : IObservable<string>
 
         public void Dispose()
         {
-            _parent?.Unsubscribe(_observer!);
+            if (_parent != null && _observer != null)
+            {
+                _parent.Unsubscribe(_observer);
+            }
+
             _parent = null;
             _observer = null;
         }

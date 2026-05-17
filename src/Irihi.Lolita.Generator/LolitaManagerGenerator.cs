@@ -84,11 +84,44 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         ManagerInfo info,
         ImmutableArray<AdditionalText> resxFiles)
     {
-        // Derive the base resource name from the attribute path (e.g. "Strings")
         var baseName = Path.GetFileNameWithoutExtension(info.ResourcePath);
 
-        // Collect base file ("") and culture variants ("zh-Hans", "en-US", …)
-        var cultureXml = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var cultureXml = CollectCultureResources(baseName, resxFiles, spc.CancellationToken);
+        if (cultureXml.Count == 0)
+        {
+            return;
+        }
+
+        // Determine the key list from the default (or first available) file
+        var baseXml = cultureXml.TryGetValue(string.Empty, out var bx) ? bx : cultureXml.Values.First();
+        var keys = ParseKeys(baseXml);
+        if (keys.Length == 0)
+        {
+            return;
+        }
+
+        // Parse values per culture
+        var cultureData = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in cultureXml)
+        {
+            cultureData[kvp.Key] = ParseValues(kvp.Value);
+        }
+
+        var source = BuildSource(info, keys, cultureData);
+        spc.AddSource($"{info.ClassName}.LolitaManager.g.cs", SourceText.From(source, Encoding.UTF8));
+    }
+
+    /// <summary>
+    /// Scans <paramref name="resxFiles"/> for entries whose file name matches
+    /// <paramref name="baseName"/> (default culture, key <c>""</c>) or
+    /// <c>BaseName.Culture.resx</c> (culture variants, key = culture tag).
+    /// </summary>
+    private static Dictionary<string, string> CollectCultureResources(
+        string baseName,
+        ImmutableArray<AdditionalText> resxFiles,
+        System.Threading.CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in resxFiles)
         {
@@ -115,35 +148,14 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var text = file.GetText(spc.CancellationToken)?.ToString();
+            var text = file.GetText(cancellationToken)?.ToString();
             if (!string.IsNullOrWhiteSpace(text))
             {
-                cultureXml[culture] = text!;
+                result[culture] = text!;
             }
         }
 
-        if (cultureXml.Count == 0)
-        {
-            return;
-        }
-
-        // Determine the key list from the default (or first available) file
-        var baseXml = cultureXml.TryGetValue(string.Empty, out var bx) ? bx : cultureXml.Values.First();
-        var keys = ParseKeys(baseXml);
-        if (keys.Length == 0)
-        {
-            return;
-        }
-
-        // Parse values per culture
-        var cultureData = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in cultureXml)
-        {
-            cultureData[kvp.Key] = ParseValues(kvp.Value);
-        }
-
-        var source = BuildSource(info, keys, cultureData);
-        spc.AddSource($"{info.ClassName}.LolitaManager.g.cs", SourceText.From(source, Encoding.UTF8));
+        return result;
     }
 
     // -------------------------------------------------------------------------
