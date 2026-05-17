@@ -231,8 +231,8 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("{");
 
         // ── Resource storage dictionary ──────────────────────────────────────
-        sb.AppendLine("    private static readonly global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Dictionary<string, string>> _lolita_resources =");
-        sb.AppendLine("        new global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.Dictionary<string, string>>()");
+        sb.AppendLine("    private static readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyDictionary<string, string>> _lolita_resources =");
+        sb.AppendLine("        new global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.IReadOnlyDictionary<string, string>>()");
         sb.AppendLine("        {");
 
         foreach (var kvp in cultureData.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
@@ -303,7 +303,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         }
 
         // ── Observable collection ────────────────────────────────────────────
-        sb.AppendLine("    private static readonly global::System.Collections.Generic.Dictionary<string, global::Irihi.Lolita.LolitaObservableString> _lolita_observables =");
+        sb.AppendLine("    private static readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::Irihi.Lolita.LolitaObservableString> _lolita_observables =");
         sb.AppendLine("        new global::System.Collections.Generic.Dictionary<string, global::Irihi.Lolita.LolitaObservableString>()");
         sb.AppendLine("        {");
 
@@ -334,7 +334,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("            culture = global::System.Globalization.CultureInfo.InvariantCulture;");
         sb.AppendLine("        }");
         sb.AppendLine();
-        sb.AppendLine("        global::System.Collections.Generic.Dictionary<string, string>? dict;");
+        sb.AppendLine("        global::System.Collections.Generic.IReadOnlyDictionary<string, string>? dict;");
         sb.AppendLine("        if (!_lolita_resources.TryGetValue(culture.Name, out dict))");
         sb.AppendLine("        {");
         sb.AppendLine("            if (!_lolita_resources.TryGetValue(culture.TwoLetterISOLanguageName, out dict))");
