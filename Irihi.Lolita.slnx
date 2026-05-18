@@ -11,5 +11,6 @@
   <Folder Name="/test/">
     <Project Path="test/Irihi.Lolita.Core.Tests/Irihi.Lolita.Core.Tests.csproj" />
     <Project Path="test/Irihi.Lolita.Generator.Tests/Irihi.Lolita.Generator.Tests.csproj" />
+    <Project Path="test/Irihi.Lolita.Avalonia.Tests/Irihi.Lolita.Avalonia.Tests.csproj" />
   </Folder>
 </Solution>
