@@ -2,7 +2,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Irihi.Lolita.AvaloniaDemo.ViewModels"
         xmlns:local="using:Irihi.Lolita.AvaloniaDemo"
-        xmlns:lolita="using:Irihi.Lolita"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="360"
@@ -31,7 +30,7 @@
                    HorizontalAlignment="Center" />
 
         <!-- LocalizeExtension: directly bind to a LolitaKey without a ViewModel wrapper -->
-        <TextBlock Text="{lolita:Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}"
+        <TextBlock Text="{Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}"
                    FontSize="14" FontStyle="Italic"
                    HorizontalAlignment="Center"
                    ToolTip.Tip="Bound with LocalizeExtension (no ViewModel)" />

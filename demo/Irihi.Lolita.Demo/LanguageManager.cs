@@ -1,5 +1,3 @@
-using Irihi.Lolita;
-
 namespace Irihi.Lolita.Demo;
 
 /// <summary>
