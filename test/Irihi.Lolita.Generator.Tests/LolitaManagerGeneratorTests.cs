@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Text;
+using System.Text.RegularExpressions;
 using Irihi.Lolita;
 using Irihi.Lolita.Generator;
 using Microsoft.CodeAnalysis;
@@ -364,6 +365,73 @@ public class LolitaManagerGeneratorTests
         var runResult = driver.GetRunResult();
         Assert.AreEqual(0, runResult.Diagnostics.Length,
             $"Expected no diagnostics, got: {string.Join(", ", runResult.Diagnostics)}");
+    }
+
+    // ── Duplicate keys and reachable edge cases ──────────────────────────────
+
+    [TestMethod]
+    public void Generator_DuplicateKeys_DeduplicatesIdentifiers()
+    {
+        // Two keys that sanitize to the same identifier (dots → underscores)
+        // should appear only once in the generated output.
+        const string resx = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <root>
+              <data name="key.foo" xml:space="preserve">
+                <value>First</value>
+              </data>
+              <data name="key-foo" xml:space="preserve">
+                <value>Second</value>
+              </data>
+            </root>
+            """;
+
+        var result = RunGenerator(InputSource, ("Strings.resx", resx));
+        Assert.AreEqual(1, result.GeneratedSources.Length);
+        var source = result.GeneratedSources[0].SourceText.ToString();
+
+        // Only one LolitaKey member with the sanitized identifier
+        var count = Regex
+            .Matches(source, @"public static readonly global::Irihi\.Lolita\.LolitaKey key_foo")
+            .Count;
+        Assert.AreEqual(1, count, "Duplicate sanitized identifier should appear only once in Keys class.");
+    }
+
+    [TestMethod]
+    public void Generator_EmptyCultureTag_IsIgnored()
+    {
+        // A file named "Strings..resx" would produce an empty culture tag after
+        // stripping the base name prefix. It should be silently skipped.
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent),
+            ("Strings..resx", ZhHansResxContent));
+
+        Assert.AreEqual(1, result.GeneratedSources.Length,
+            "Expected exactly one generated file — the double-dot resx should be ignored.");
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        // Only the default culture key should appear in resources
+        // If the empty-culture file were accidentally included, its key would
+        // appear as ["."]. Verify it does not.
+        const string spuriousEmptyCultureKey = "[\".\"]\"";        Assert.IsFalse(source.Contains(spuriousEmptyCultureKey),
+            "The spurious '.' culture key must not appear in the generated code.");
+    }
+
+    [TestMethod]
+    public void Generator_CultureVariantWithInvalidXml_GeneratesOutputUsingDefaultCulture()
+    {
+        // When a culture-variant file has malformed XML, ParseValues catches the
+        // XmlException and returns an empty dictionary. The generator should still
+        // produce output based on the valid default-culture file.
+        const string invalidCultureResx = "<<<not xml>>>";
+
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent),
+            ("Strings.zh-Hans.resx", invalidCultureResx));
+
+        Assert.AreEqual(1, result.GeneratedSources.Length,
+            "Expected output even when a culture variant file has invalid XML.");
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        StringAssert.Contains(source, "App_Title");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
