@@ -1,3 +1,184 @@
 # Irihi.Lolita
 
-Source generator package for generating i18n facilities for Avalonia projects from `.resx` files.
+A C# source generator that turns `.resx` resource files into a strongly-typed, reactive i18n manager.
+Each resource key becomes an `IObservable<string?>` property that pushes a new value whenever the active culture changes — no manual `INotifyPropertyChanged` wiring required.
+
+## Installation
+
+Add the NuGet package to your project:
+
+```xml
+<PackageReference Include="Irihi.Lolita" Version="0.1.0" />
+```
+
+The package bundles both the runtime library and the Roslyn source generator. No separate analyzer reference is needed.
+
+## Quick Start
+
+### 1. Create your `.resx` files
+
+Create a base resource file and one file per culture you want to support.
+The culture variant files must follow the `<BaseName>.<culture>.resx` naming convention.
+
+`Resources/Strings.resx` (default / invariant culture):
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="App_Title" xml:space="preserve">
+    <value>My Application</value>
+  </data>
+  <data name="Greeting_Message" xml:space="preserve">
+    <value>Hello!</value>
+  </data>
+</root>
+```
+
+`Resources/Strings.zh-Hans.resx` (Simplified Chinese):
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="App_Title" xml:space="preserve">
+    <value>我的应用程序</value>
+  </data>
+  <data name="Greeting_Message" xml:space="preserve">
+    <value>你好！</value>
+  </data>
+</root>
+```
+
+### 2. Add the resource files as `AdditionalFiles`
+
+The generator reads all `.resx` files listed as `AdditionalFiles` in your project file.
+
+```xml
+<ItemGroup>
+  <AdditionalFiles Include="Resources\Strings.resx" />
+  <AdditionalFiles Include="Resources\Strings.zh-Hans.resx" />
+</ItemGroup>
+```
+
+### 3. Declare the language manager
+
+Apply `[LolitaManager]` to a `partial class`, pointing it at the base `.resx` file.
+The source generator fills in the rest at build time.
+
+```csharp
+[LolitaManager("./Resources/Strings.resx")]
+public partial class LanguageManager;
+```
+
+### 4. Subscribe to observable strings
+
+Each resource key is exposed as an `IObservable<string?>` property on the singleton `Instance`.
+Subscribers receive the current value immediately (behaviour-subject semantics) and then every subsequent update.
+
+```csharp
+using System.Globalization;
+
+// Subscribe — current value is emitted immediately on Subscribe
+using var titleSub = LanguageManager.Instance.App_Title.Subscribe(
+    title => Console.WriteLine($"Title: {title}"));
+
+using var greetingSub = LanguageManager.Instance.Greeting_Message.Subscribe(
+    msg => Console.WriteLine($"Greeting: {msg}"));
+```
+
+### 5. Switch the active culture
+
+Call `UpdateCulture` at any time to push new values to all active subscribers.
+The method walks the culture hierarchy (e.g. `zh-Hans-CN` → `zh-Hans` → invariant) until a matching resource file is found.
+
+```csharp
+// Switch to Simplified Chinese
+LanguageManager.Instance.UpdateCulture(new CultureInfo("zh-Hans"));
+
+// Revert to the default (invariant) culture
+LanguageManager.Instance.UpdateCulture(CultureInfo.InvariantCulture);
+```
+
+---
+
+## Avalonia Usage
+
+### ViewModel + stream binding (`^`)
+
+Expose the observable string properties from your view-model and bind them in XAML using the `^` stream-binding operator.
+
+```csharp
+public class MainWindowViewModel
+{
+    public IObservable<string?> AppTitle       => LanguageManager.Instance.App_Title;
+    public IObservable<string?> GreetingMessage => LanguageManager.Instance.Greeting_Message;
+}
+```
+
+```xml
+<TextBlock Text="{Binding AppTitle^}" />
+<TextBlock Text="{Binding GreetingMessage^}" />
+```
+
+### `LocalizeExtension` markup extension
+
+For direct XAML bindings without a view-model wrapper, use the `Localize` markup extension together with the generated `Keys` nested class.
+
+`LocalizeExtension` is registered under the standard Avalonia XML namespace (`https://github.com/avaloniaui`) via `XmlnsDefinition`, so no additional namespace declaration is required.
+Add only a `local:` alias for the namespace that contains your `LanguageManager`:
+
+```xml
+xmlns="https://github.com/avaloniaui"
+xmlns:local="using:YourAppNamespace"
+```
+
+Then use the extension:
+```xml
+<TextBlock Text="{Localize {x:Static local:LanguageManager+Keys.App_Title}}" />
+<TextBlock Text="{Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
+```
+
+The extension resolves the `LolitaKey` from the `Keys` class, looks up the corresponding `IObservable<string?>` and converts it into an Avalonia binding that updates automatically when the culture changes.
+
+---
+
+## API Reference
+
+### `LolitaManagerAttribute`
+
+```csharp
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class LolitaManagerAttribute(string resourcePath) : Attribute
+```
+
+Apply to a `partial class` to trigger code generation.
+`resourcePath` is the relative path to the **base** `.resx` file (e.g. `./Resources/Strings.resx`).
+
+### Generated class members
+
+Given a `partial class LanguageManager` decorated with `[LolitaManager]`, the generator emits:
+
+| Member | Description |
+|---|---|
+| `static readonly ILolitaManager Instance` | Singleton accessor. |
+| `IObservable<string?> <Key>` | One property per resource key (e.g. `App_Title`). |
+| `void UpdateCulture(CultureInfo)` | Switches culture and pushes new values to all observers. |
+| `IObservable<string?>? GetObservable(string key)` | Looks up an observable by raw key name. |
+| `static class Keys` | Nested class with a `LolitaKey` constant for every resource key. |
+
+### `ILolitaManager`
+
+```csharp
+public interface ILolitaManager
+{
+    void UpdateCulture(CultureInfo culture);
+    IObservable<string?>? GetObservable(string key);
+}
+```
+
+### `LolitaKey`
+
+A value type that pairs a raw resource key string with its owning `ILolitaManager`.
+Used as the argument to `LocalizeExtension` and implicitly convertible to `string?`.
+
+```csharp
+// Implicit string conversion
+string? title = LanguageManager.Keys.App_Title; // returns current value
+```
