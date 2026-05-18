@@ -22,22 +22,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Reference the generator to make it available as an analyzer and embed it in the NuGet package -->
+    <!-- Reference the generator project; PrivateAssets="all" prevents it from flowing as a package dependency -->
     <ProjectReference Include="..\Irihi.Lolita.Generator\Irihi.Lolita.Generator.csproj"
                       PrivateAssets="all"
-                      ReferenceOutputAssembly="false"
-                      OutputItemType="Analyzer" />
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-  <!-- Pack the source generator DLL into the analyzers folder of the NuGet package -->
-  <Target Name="IncludeSourceGeneratorInPackage"
-          BeforeTargets="_GetPackageFiles"
-          DependsOnTargets="ResolveReferences">
-    <ItemGroup>
-      <None Include="@(Analyzer)"
-            Pack="true"
-            PackagePath="analyzers/dotnet/cs"
-            Visible="false" />
-    </ItemGroup>
-  </Target>
+  <!-- Explicitly pack only the source generator DLL into the analyzers folder of the NuGet package -->
+  <ItemGroup Label="Package">
+    <None Include="..\Irihi.Lolita.Generator\bin\$(Configuration)\netstandard2.0\Irihi.Lolita.Generator.dll"
+          PackagePath="analyzers\dotnet\cs"
+          Pack="true"
+          Visible="false" />
+  </ItemGroup>
 </Project>
