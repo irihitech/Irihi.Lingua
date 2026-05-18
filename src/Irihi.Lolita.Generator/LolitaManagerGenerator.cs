@@ -14,10 +14,10 @@ namespace Irihi.Lolita.Generator;
 /// <list type="bullet">
 ///   <item>A private constructor and a <c>public static readonly ILolitaManager Instance</c> singleton.</item>
 ///   <item>A nested <c>Keys</c> static class with a <c>public static readonly LolitaKey</c> for every resource key.</item>
-///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> instance backing field.</item>
+///   <item>A per-key <c>LolitaObservableString</c> instance backing field.</item>
 ///   <item>A public instance <c>IObservable&lt;string?&gt;</c> property for every resource key.</item>
 ///   <item>A <c>_lolita_observables</c> dictionary (key → observable) initialized in the constructor.</item>
-///   <item>An instance <c>UpdateCulture(CultureInfo)</c> method implementing <see cref="Irihi.Lolita.ILolitaManager"/>.</item>
+///   <item>An instance <c>UpdateCulture(CultureInfo)</c> method implementing <c>ILolitaManager</c>.</item>
 ///   <item>An internal resource dictionary covering every discovered culture variant.</item>
 /// </list>
 /// </summary>

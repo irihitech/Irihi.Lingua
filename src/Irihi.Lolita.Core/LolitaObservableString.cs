@@ -12,8 +12,12 @@ namespace Irihi.Lolita;
 /// </remarks>
 public sealed class LolitaObservableString : IObservable<string?>
 {
-    private readonly object _lock = new object();
-    private readonly List<IObserver<string?>> _observers = new List<IObserver<string?>>();
+    #if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+    #else
+    private readonly object _lock = new();
+    #endif
+    private readonly List<IObserver<string?>> _observers = [];
     private string? _currentValue;
 
     /// <summary>

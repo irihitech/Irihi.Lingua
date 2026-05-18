@@ -1,8 +1,6 @@
 using System.Collections.Immutable;
 using System.Text;
 using System.Text.RegularExpressions;
-using Irihi.Lolita;
-using Irihi.Lolita.Generator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -330,7 +328,7 @@ public class LolitaManagerGeneratorTests
     [TestMethod]
     public void Generator_GeneratedSource_CompilesWithoutErrors()
     {
-        var (outputCompilation, diagnostics) = RunGeneratorWithCompilation(InputSource,
+        var (outputCompilation, _) = RunGeneratorWithCompilation(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         // Filter only errors (ignore warnings)
@@ -469,7 +467,7 @@ public class LolitaManagerGeneratorTests
         var generator = new LolitaManagerGenerator();
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            generators: new ISourceGenerator[] { generator.AsSourceGenerator() },
+            generators: [generator.AsSourceGenerator()],
             additionalTexts: additionalTexts);
 
         driver = driver.RunGeneratorsAndUpdateCompilation(
@@ -494,7 +492,7 @@ public class LolitaManagerGeneratorTests
             MetadataReference.CreateFromFile(Path.Combine(runtimeDir, "System.Globalization.dll")),
             // Reference the Core project assembly so that LolitaManagerAttribute,
             // ILolitaManager, LolitaObservableString, and LolitaKey are available.
-            MetadataReference.CreateFromFile(typeof(Irihi.Lolita.ILolitaManager).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(ILolitaManager).Assembly.Location),
         };
 
         return CSharpCompilation.Create(
@@ -519,6 +517,6 @@ public class LolitaManagerGeneratorTests
 
         public override string Path => _path;
 
-        public override SourceText? GetText(CancellationToken cancellationToken = default) => _text;
+        public override SourceText GetText(CancellationToken cancellationToken = default) => _text;
     }
 }
