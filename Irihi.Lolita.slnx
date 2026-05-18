@@ -8,5 +8,8 @@
     <Project Path="src/Irihi.Lolita.Core/Irihi.Lolita.Core.csproj" />
     <Project Path="src/Irihi.Lolita.Generator/Irihi.Lolita.Generator.csproj" />
   </Folder>
-  <Folder Name="/test/" />
+  <Folder Name="/test/">
+    <Project Path="test/Irihi.Lolita.Core.Tests/Irihi.Lolita.Core.Tests.csproj" />
+    <Project Path="test/Irihi.Lolita.Generator.Tests/Irihi.Lolita.Generator.Tests.csproj" />
+  </Folder>
 </Solution>
