@@ -30,5 +30,5 @@ public interface ILolitaManager
     /// the key is not found.
     /// </summary>
     /// <param name="key">The raw resource key string (e.g. <c>"App_Title"</c>).</param>
-    IObservable<string>? GetObservable(string key);
+    IObservable<string?>? GetObservable(string key);
 }
