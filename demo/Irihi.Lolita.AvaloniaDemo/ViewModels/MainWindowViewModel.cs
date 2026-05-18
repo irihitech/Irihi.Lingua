@@ -18,20 +18,20 @@ public partial class MainWindowViewModel : ObservableObject
     /// Observable title of the application window.
     /// Avalonia binds to this via <c>{Binding AppTitle^}</c>.
     /// </summary>
-    public IObservable<string> AppTitle => LanguageManager.Instance.App_Title;
+    public IObservable<string?> AppTitle => LanguageManager.Instance.App_Title;
 
     /// <summary>
     /// Observable greeting message.
     /// Avalonia binds to this via <c>{Binding GreetingMessage^}</c>.
     /// </summary>
-    public IObservable<string> GreetingMessage => LanguageManager.Instance.Greeting_Message;
+    public IObservable<string?> GreetingMessage => LanguageManager.Instance.Greeting_Message;
 
     /// <summary>
     /// Observable label for the language-toggle button, so the button text
     /// itself updates reactively when the culture changes.
     /// Avalonia binds to this via <c>{Binding SwitchLanguageLabel^}</c>.
     /// </summary>
-    public IObservable<string> SwitchLanguageLabel => LanguageManager.Instance.Switch_Language;
+    public IObservable<string?> SwitchLanguageLabel => LanguageManager.Instance.Switch_Language;
 
     /// <summary>
     /// Toggles the application language between Simplified Chinese and the

@@ -19,7 +19,7 @@ namespace Irihi.Lolita.Generator;
 ///   <item>A private constructor and a <c>public static readonly ILolitaManager Instance</c> singleton.</item>
 ///   <item>A nested <c>Keys</c> static class with a <c>public static readonly LolitaKey</c> for every resource key.</item>
 ///   <item>A per-key <see cref="Irihi.Lolita.LolitaObservableString"/> instance backing field.</item>
-///   <item>A public instance <c>IObservable&lt;string&gt;</c> property for every resource key.</item>
+///   <item>A public instance <c>IObservable&lt;string?&gt;</c> property for every resource key.</item>
 ///   <item>A <c>_lolita_observables</c> dictionary (key → observable) initialized in the constructor.</item>
 ///   <item>An instance <c>UpdateCulture(CultureInfo)</c> method implementing <see cref="Irihi.Lolita.ILolitaManager"/>.</item>
 ///   <item>An internal resource dictionary covering every discovered culture variant.</item>
@@ -336,7 +336,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             sb.AppendLine($"        new global::Irihi.Lolita.LolitaObservableString(\"{EscapeString(key)}\", @\"{EscapeVerbatimString(defaultValue)}\");");
             sb.AppendLine();
             sb.AppendLine($"    /// <summary>Gets an observable that emits the current value of the <c>{EscapeXmlComment(key)}</c> resource key.</summary>");
-            sb.AppendLine($"    public global::System.IObservable<string> {identifier} => _lolita_{identifier};");
+            sb.AppendLine($"    public global::System.IObservable<string?> {identifier} => _lolita_{identifier};");
             sb.AppendLine();
         }
 
@@ -382,7 +382,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// Returns the observable for the given resource key, or <c>null</c> if the key is not found.");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public global::System.IObservable<string>? GetObservable(string key)");
+        sb.AppendLine("    public global::System.IObservable<string?>? GetObservable(string key)");
         sb.AppendLine("    {");
         sb.AppendLine("        _lolita_observables.TryGetValue(key, out var _lolita_obs);");
         sb.AppendLine("        return _lolita_obs;");
