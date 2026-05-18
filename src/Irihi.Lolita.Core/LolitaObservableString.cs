@@ -47,10 +47,7 @@ public sealed class LolitaObservableString : IObservable<string?>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="key"/> is <c>null</c>.</exception>
     public LolitaObservableString(string key, string? initialValue)
     {
-        if (key is null)
-        {
-            throw new ArgumentNullException(nameof(key));
-        }
+        ArgumentNullException.ThrowIfNull(key);
 
         Key = key;
         _currentValue = initialValue;
@@ -88,6 +85,11 @@ public sealed class LolitaObservableString : IObservable<string?>
     /// <param name="value">The new value to emit.</param>
     public void OnNext(string? value)
     {
+        if (_observers.Count == 0)
+        {
+            _currentValue = value;
+            return;
+        }
         IObserver<string?>[] observers;
         lock (_lock)
         {
@@ -109,16 +111,10 @@ public sealed class LolitaObservableString : IObservable<string?>
         }
     }
 
-    private sealed class Subscription : IDisposable
+    private sealed class Subscription(LolitaObservableString parent, IObserver<string?> observer) : IDisposable
     {
-        private LolitaObservableString? _parent;
-        private IObserver<string?>? _observer;
-
-        public Subscription(LolitaObservableString parent, IObserver<string?> observer)
-        {
-            _parent = parent;
-            _observer = observer;
-        }
+        private LolitaObservableString? _parent = parent;
+        private IObserver<string?>? _observer = observer;
 
         public void Dispose()
         {

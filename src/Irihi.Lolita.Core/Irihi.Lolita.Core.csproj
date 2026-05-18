@@ -7,7 +7,7 @@
 
     <!-- NuGet package metadata -->
     <PackageId>Irihi.Lolita</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>rabbitism</Authors>
     <Description>Source generator package for generating i18n facilities for Avalonia projects from .resx files.</Description>
     <PackageTags>source-generator;i18n;avalonia;resx</PackageTags>
