@@ -6,6 +6,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Irihi.Lolita.Core/Irihi.Lolita.Core.csproj" />
+    <Project Path="src/Irihi.Lolita.Avalonia/Irihi.Lolita.Avalonia.csproj" />
     <Project Path="src/Irihi.Lolita.Generator/Irihi.Lolita.Generator.csproj" />
   </Folder>
   <Folder Name="/test/" />

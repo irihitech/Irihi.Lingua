@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 
 namespace Irihi.Lolita;
@@ -22,4 +23,12 @@ public interface ILolitaManager
     /// <param name="culture">The target culture.  A <c>null</c> value is treated
     /// as <see cref="CultureInfo.InvariantCulture"/>.</param>
     void UpdateCulture(CultureInfo culture);
+
+    /// <summary>
+    /// Returns the <see cref="IObservable{T}"/> that emits the current localized
+    /// string for the given resource <paramref name="key"/>, or <c>null</c> when
+    /// the key is not found.
+    /// </summary>
+    /// <param name="key">The raw resource key string (e.g. <c>"App_Title"</c>).</param>
+    IObservable<string>? GetObservable(string key);
 }

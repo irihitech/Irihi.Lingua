@@ -1,13 +1,15 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Irihi.Lolita.AvaloniaDemo.ViewModels"
+        xmlns:local="using:Irihi.Lolita.AvaloniaDemo"
+        xmlns:lolita="using:Irihi.Lolita.Avalonia"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="300"
+        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="360"
         x:Class="Irihi.Lolita.AvaloniaDemo.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding AppTitle^}"
-        Width="480" Height="300"
+        Width="480" Height="360"
         CanResize="False">
 
     <Design.DataContext>
@@ -27,6 +29,12 @@
         <TextBlock Text="{Binding GreetingMessage^}"
                    FontSize="16"
                    HorizontalAlignment="Center" />
+
+        <!-- LocaleBinding: directly bind to a LolitaKey without a ViewModel wrapper -->
+        <TextBlock Text="{lolita:LocaleBinding {x:Static local:LanguageManager+Keys.Greeting_Message}}"
+                   FontSize="14" FontStyle="Italic"
+                   HorizontalAlignment="Center"
+                   ToolTip.Tip="Bound with LocaleBinding (no ViewModel)" />
 
         <!-- Toggle button — its label is itself an observable string,
              demonstrating that even UI chrome can be driven by the same
