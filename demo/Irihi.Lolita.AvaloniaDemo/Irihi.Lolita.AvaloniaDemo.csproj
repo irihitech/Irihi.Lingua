@@ -28,7 +28,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Irihi.Lolita.Core\Irihi.Lolita.Core.csproj" />
-    <ProjectReference Include="..\..\src\Irihi.Lolita.Avalonia\Irihi.Lolita.Avalonia.csproj" />
     <ProjectReference Include="..\..\src\Irihi.Lolita.Generator\Irihi.Lolita.Generator.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />

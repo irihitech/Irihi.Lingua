@@ -3,7 +3,7 @@ using Avalonia;
 using Avalonia.Data;
 using Avalonia.Markup.Xaml;
 
-namespace Irihi.Lolita.Avalonia;
+namespace Irihi.Lolita;
 
 /// <summary>
 /// Markup extension that creates a one-way binding to the localized string
@@ -19,7 +19,7 @@ namespace Irihi.Lolita.Avalonia;
 /// <para>
 /// Typical XAML usage:
 /// <code><![CDATA[
-///   xmlns:lolita="using:Irihi.Lolita.Avalonia"
+///   xmlns:lolita="using:Irihi.Lolita"
 ///   xmlns:local="using:MyApp"
 ///
 ///   <TextBlock Text="{lolita:Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
