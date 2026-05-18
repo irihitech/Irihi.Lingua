@@ -22,7 +22,7 @@ namespace Irihi.Lolita.Avalonia;
 ///   xmlns:lolita="using:Irihi.Lolita.Avalonia"
 ///   xmlns:local="using:MyApp"
 ///
-///   <TextBlock Text="{lolita:LocaleBinding {x:Static local:LanguageManager.Keys.App_Title}}" />
+///   <TextBlock Text="{lolita:LocaleBinding {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
 /// ]]></code>
 /// </para>
 /// </remarks>
