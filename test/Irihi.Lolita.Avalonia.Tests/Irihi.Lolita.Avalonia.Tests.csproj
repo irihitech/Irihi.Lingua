@@ -19,5 +19,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Irihi.Lolita.Core\Irihi.Lolita.Core.csproj" />
+    <ProjectReference Include="..\..\src\Irihi.Lolita.Generator\Irihi.Lolita.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="Resources\Strings.resx" />
+    <AdditionalFiles Include="Resources\Strings.zh-Hans.resx" />
   </ItemGroup>
 </Project>
