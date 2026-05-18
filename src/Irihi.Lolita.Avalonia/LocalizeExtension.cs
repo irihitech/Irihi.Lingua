@@ -22,11 +22,11 @@ namespace Irihi.Lolita.Avalonia;
 ///   xmlns:lolita="using:Irihi.Lolita.Avalonia"
 ///   xmlns:local="using:MyApp"
 ///
-///   <TextBlock Text="{lolita:LocaleBinding {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
+///   <TextBlock Text="{lolita:Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
 /// ]]></code>
 /// </para>
 /// </remarks>
-public sealed class LocaleBindingExtension : MarkupExtension
+public sealed class LocalizeExtension : MarkupExtension
 {
     /// <summary>
     /// Gets or sets the <see cref="LolitaKey"/> that identifies the localized resource.
@@ -36,14 +36,14 @@ public sealed class LocaleBindingExtension : MarkupExtension
     /// <summary>
     /// Initializes a new instance with no key (supports XAML attribute syntax).
     /// </summary>
-    public LocaleBindingExtension() { }
+    public LocalizeExtension() { }
 
     /// <summary>
     /// Initializes a new instance with a positional <paramref name="key"/> argument
     /// (supports the compact XAML constructor syntax).
     /// </summary>
     /// <param name="key">The key to bind to.</param>
-    public LocaleBindingExtension(LolitaKey key) => Key = key;
+    public LocalizeExtension(LolitaKey key) => Key = key;
 
     /// <inheritdoc/>
     public override object ProvideValue(IServiceProvider serviceProvider)

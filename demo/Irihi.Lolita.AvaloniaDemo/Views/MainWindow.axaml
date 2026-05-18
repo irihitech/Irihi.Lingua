@@ -30,11 +30,11 @@
                    FontSize="16"
                    HorizontalAlignment="Center" />
 
-        <!-- LocaleBinding: directly bind to a LolitaKey without a ViewModel wrapper -->
-        <TextBlock Text="{lolita:LocaleBinding {x:Static local:LanguageManager+Keys.Greeting_Message}}"
+        <!-- LocalizeExtension: directly bind to a LolitaKey without a ViewModel wrapper -->
+        <TextBlock Text="{lolita:Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}"
                    FontSize="14" FontStyle="Italic"
                    HorizontalAlignment="Center"
-                   ToolTip.Tip="Bound with LocaleBinding (no ViewModel)" />
+                   ToolTip.Tip="Bound with LocalizeExtension (no ViewModel)" />
 
         <!-- Toggle button — its label is itself an observable string,
              demonstrating that even UI chrome can be driven by the same
