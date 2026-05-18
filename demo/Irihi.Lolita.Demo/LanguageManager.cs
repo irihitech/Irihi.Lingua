@@ -5,4 +5,4 @@ namespace Irihi.Lolita.Demo;
 /// The source generator will fill in all reactive members from the resx files.
 /// </summary>
 [LolitaManager("./Resources/Strings.resx")]
-public partial class LanguageManager { }
+public partial class LanguageManager;
