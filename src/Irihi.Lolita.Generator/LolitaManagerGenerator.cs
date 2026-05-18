@@ -376,6 +376,17 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("                _lolita_obs.OnNext(_lolita_v);");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
+        sb.AppendLine();
+
+        // ── GetObservable method (implements ILolitaManager) ──────────────────
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Returns the observable for the given resource key, or <c>null</c> if the key is not found.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public global::System.IObservable<string>? GetObservable(string key)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        _lolita_observables.TryGetValue(key, out var _lolita_obs);");
+        sb.AppendLine("        return _lolita_obs;");
+        sb.AppendLine("    }");
         sb.AppendLine("}");
 
         return sb.ToString();
