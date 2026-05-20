@@ -70,5 +70,6 @@ public class LolitaKeyTests
     {
         public void UpdateCulture(System.Globalization.CultureInfo culture) { }
         public IObservable<string?>? GetObservable(string key) => null;
+        public void AddResources(System.Globalization.CultureInfo culture, IReadOnlyDictionary<string, string> resources) { }
     }
 }

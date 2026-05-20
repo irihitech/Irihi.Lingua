@@ -257,28 +257,35 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine($"    public static readonly {info.ClassName} Instance = new {info.ClassName}();");
         sb.AppendLine();
 
-        // ── Resource storage dictionary ──────────────────────────────────────
-        sb.AppendLine("    private static readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::System.Collections.Generic.IReadOnlyDictionary<string, string>> _lolita_resources =");
-        sb.AppendLine("        new global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.IReadOnlyDictionary<string, string>>()");
-        sb.AppendLine("        {");
+        // ── Resource storage (static, uses LolitaRuntimeResources for consistent lookup) ──
+        sb.AppendLine("    private static readonly global::Irihi.Lolita.LolitaRuntimeResources _lolita_resources = CreateStaticResources();");
+        sb.AppendLine();
+        sb.AppendLine("    private static global::Irihi.Lolita.LolitaRuntimeResources CreateStaticResources()");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var _lolita_r = new global::Irihi.Lolita.LolitaRuntimeResources();");
 
         foreach (var kvp in cultureData.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
         {
-            sb.AppendLine($"            [\"{EscapeString(kvp.Key)}\"] = new global::System.Collections.Generic.Dictionary<string, string>()");
-            sb.AppendLine("            {");
+            var cultureKey = string.IsNullOrEmpty(kvp.Key)
+                ? "global::System.Globalization.CultureInfo.InvariantCulture"
+                : $"new global::System.Globalization.CultureInfo(\"{EscapeString(kvp.Key)}\")";
+
+            sb.AppendLine($"        _lolita_r.Add({cultureKey}, new global::System.Collections.Generic.Dictionary<string, string>()");
+            sb.AppendLine("        {");
 
             foreach (var key in keys)
             {
                 if (kvp.Value.TryGetValue(key, out var value))
                 {
-                    sb.AppendLine($"                [\"{EscapeString(key)}\"] = @\"{EscapeVerbatimString(value)}\",");
+                    sb.AppendLine($"            [\"{EscapeString(key)}\"] = @\"{EscapeVerbatimString(value)}\",");
                 }
             }
 
-            sb.AppendLine("            },");
+            sb.AppendLine("        });");
         }
 
-        sb.AppendLine("        };");
+        sb.AppendLine("        return _lolita_r;");
+        sb.AppendLine("    }");
         sb.AppendLine();
 
         // ── Keys nested class ────────────────────────────────────────────────
@@ -340,10 +347,15 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("    private readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::Irihi.Lolita.LolitaObservableString> _lolita_observables;");
         sb.AppendLine();
 
+        // ── Runtime resources field ──────────────────────────────────────────
+        sb.AppendLine("    private readonly global::Irihi.Lolita.LolitaRuntimeResources _lolita_runtime = new global::Irihi.Lolita.LolitaRuntimeResources();");
+        sb.AppendLine();
+
         // ── UpdateCulture method (implements ILolitaManager) ─────────────────
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// Switches all observable properties to the values for <paramref name=\"culture\"/>.");
         sb.AppendLine("    /// Falls back to the parent culture, then to the default (invariant) culture.");
+        sb.AppendLine("    /// Runtime resources added via <see cref=\"global::Irihi.Lolita.ILolitaManager.AddResources\"/> take precedence.");
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    public void UpdateCulture(global::System.Globalization.CultureInfo culture)");
         sb.AppendLine("    {");
@@ -352,24 +364,21 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("            culture = global::System.Globalization.CultureInfo.InvariantCulture;");
         sb.AppendLine("        }");
         sb.AppendLine();
-        sb.AppendLine("        global::System.Collections.Generic.IReadOnlyDictionary<string, string>? dict;");
-        sb.AppendLine("        if (!_lolita_resources.TryGetValue(culture.Name, out dict))");
-        sb.AppendLine("        {");
-        sb.AppendLine("            if (!_lolita_resources.TryGetValue(culture.TwoLetterISOLanguageName, out dict))");
-        sb.AppendLine("            {");
-        sb.AppendLine("                _lolita_resources.TryGetValue(\"\", out dict);");
-        sb.AppendLine("            }");
-        sb.AppendLine("        }");
+        sb.AppendLine("        var _lolita_static_dict = _lolita_resources.Resolve(culture);");
         sb.AppendLine();
-        sb.AppendLine("        if (dict is null)");
+        sb.AppendLine("        var _lolita_extra_dict = _lolita_runtime.Resolve(culture);");
+        sb.AppendLine();
+        sb.AppendLine("        if (_lolita_static_dict is null && _lolita_extra_dict is null)");
         sb.AppendLine("        {");
         sb.AppendLine("            return;");
         sb.AppendLine("        }");
         sb.AppendLine();
         sb.AppendLine("        foreach (var _lolita_obs in _lolita_observables.Values)");
         sb.AppendLine("        {");
-        sb.AppendLine("            if (dict.TryGetValue(_lolita_obs.Key, out var _lolita_v))");
-        sb.AppendLine("                _lolita_obs.OnNext(_lolita_v);");
+        sb.AppendLine("            if (_lolita_extra_dict is not null && _lolita_extra_dict.TryGetValue(_lolita_obs.Key, out var _lolita_ev))");
+        sb.AppendLine("                _lolita_obs.OnNext(_lolita_ev);");
+        sb.AppendLine("            else if (_lolita_static_dict is not null && _lolita_static_dict.TryGetValue(_lolita_obs.Key, out var _lolita_sv))");
+        sb.AppendLine("                _lolita_obs.OnNext(_lolita_sv);");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
@@ -383,6 +392,15 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        _lolita_observables.TryGetValue(key, out var _lolita_obs);");
         sb.AppendLine("        return _lolita_obs;");
         sb.AppendLine("    }");
+        sb.AppendLine();
+
+        // ── AddResources method (implements ILolitaManager) ──────────────────
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Adds or overrides resource entries for the given culture at runtime.");
+        sb.AppendLine("    /// Call <see cref=\"UpdateCulture\"/> afterwards to apply the changes to all observables.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public void AddResources(global::System.Globalization.CultureInfo culture, global::System.Collections.Generic.IReadOnlyDictionary<string, string> resources)");
+        sb.AppendLine("        => _lolita_runtime.Add(culture, resources);");
         sb.AppendLine("}");
 
         return sb.ToString();

@@ -30,4 +30,23 @@ public interface ILolitaManager
     /// </summary>
     /// <param name="key">The raw resource key string (e.g. <c>"App_Title"</c>).</param>
     IObservable<string?>? GetObservable(string key);
+
+    /// <summary>
+    /// Adds or overrides resource strings for the given culture at runtime.
+    /// </summary>
+    /// <remarks>
+    /// Entries supplied here take precedence over compile-time (embedded) resources
+    /// when <see cref="UpdateCulture"/> is next called.  This allows loading new
+    /// cultures or patching existing ones without recompiling the assembly.
+    /// Calling this method does <em>not</em> immediately update observable values;
+    /// call <see cref="UpdateCulture"/> afterwards to apply the change.
+    /// </remarks>
+    /// <param name="culture">
+    /// The target culture (e.g. <c>new CultureInfo("ja-JP")</c>).
+    /// Use <see cref="CultureInfo.InvariantCulture"/> for the invariant/default culture.
+    /// </param>
+    /// <param name="resources">
+    /// The key/value pairs to add.  Must not be <c>null</c>.
+    /// </param>
+    void AddResources(CultureInfo culture, IReadOnlyDictionary<string, string> resources);
 }
