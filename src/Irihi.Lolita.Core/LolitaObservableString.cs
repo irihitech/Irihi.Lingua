@@ -78,22 +78,22 @@ public sealed class LolitaObservableString : IObservable<string?>
             observer.OnNext(value);
     }
 
-    private void Unsubscribe(IObserver<string?> observer)
+    internal void Unsubscribe(IObserver<string?> observer)
     {
         lock (_lock)
         {
             _observers = _observers.Where(o => o != observer).ToArray();
         }
     }
+}
 
-    private sealed class Subscription(LolitaObservableString parent, IObserver<string?> observer) : IDisposable
+sealed class Subscription(LolitaObservableString parent, IObserver<string?> observer) : IDisposable
+{
+    private int _disposed;
+
+    public void Dispose()
     {
-        private int _disposed;
-
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) == 0)
-                parent.Unsubscribe(observer);
-        }
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            parent.Unsubscribe(observer);
     }
 }
