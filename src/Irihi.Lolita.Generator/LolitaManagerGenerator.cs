@@ -237,7 +237,29 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine($"{info.Accessibility} partial class {info.ClassName} : global::Irihi.Lolita.ILolitaManager");
         sb.AppendLine("{");
 
-        // ── Private constructor ──────────────────────────────────────────────
+        var defaultValues = cultureData.TryGetValue(string.Empty, out var dv)
+            ? dv
+            : new Dictionary<string, string>();
+
+        BuildConstructor(sb, info, keys);
+        BuildInstanceField(sb, info);
+        BuildStaticResources(sb, keys, cultureData);
+        BuildKeysClass(sb, keys);
+        BuildObservableMembers(sb, keys, defaultValues);
+        BuildObservablesField(sb);
+        BuildRuntimeResourcesField(sb);
+        BuildUpdateCultureMethod(sb);
+        BuildGetObservableMethod(sb);
+        BuildAddResourcesMethod(sb);
+
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
+
+    /// <summary>Builds the private constructor that initializes <c>_lolita_observables</c>.</summary>
+    private static void BuildConstructor(StringBuilder sb, ManagerInfo info, string[] keys)
+    {
         sb.AppendLine($"    private {info.ClassName}()");
         sb.AppendLine("    {");
 
@@ -261,13 +283,25 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        };");
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
 
-        // ── Singleton instance ───────────────────────────────────────────────
+    /// <summary>Builds the <c>public static readonly Instance</c> singleton field.</summary>
+    private static void BuildInstanceField(StringBuilder sb, ManagerInfo info)
+    {
         sb.AppendLine("    /// <summary>Gets the singleton instance of this manager.</summary>");
         sb.AppendLine($"    public static readonly {info.ClassName} Instance = new {info.ClassName}();");
         sb.AppendLine();
+    }
 
-        // ── Resource storage (static, uses LolitaRuntimeResources for consistent lookup) ──
+    /// <summary>
+    /// Builds the static <c>_lolita_resources</c> field and its factory method
+    /// <c>CreateStaticResources()</c>, which populates all compile-time culture dictionaries.
+    /// </summary>
+    private static void BuildStaticResources(
+        StringBuilder sb,
+        string[] keys,
+        Dictionary<string, Dictionary<string, string>> cultureData)
+    {
         sb.AppendLine("    private static readonly global::Irihi.Lolita.LolitaRuntimeResources _lolita_resources = CreateStaticResources();");
         sb.AppendLine();
         sb.AppendLine("    private static global::Irihi.Lolita.LolitaRuntimeResources CreateStaticResources()");
@@ -297,19 +331,27 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        return _lolita_r;");
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
 
-        // ── Keys nested class ────────────────────────────────────────────────
-        // NOTE: Keys is a nested type with its own lazy static initializer.
-        // C# guarantees that LanguageManager's type initializer (which sets
-        // Instance) runs before Keys's type initializer, because Keys is only
-        // initialized when first accessed, which cannot happen before the outer
-        // type is initialized.  The constructor of LanguageManager does NOT
-        // reference Keys, so there is no circular initialization.
+    /// <summary>
+    /// Builds the nested <c>Keys</c> static class containing a
+    /// <c>public static readonly</c> <see cref="global::Irihi.Lolita.LolitaKey"/> member per resource key.
+    /// </summary>
+    /// <remarks>
+    /// Keys is a nested type with its own lazy static initializer.
+    /// C# guarantees that the outer type's initializer (which sets <c>Instance</c>) runs
+    /// before <c>Keys</c>'s initializer, because <c>Keys</c> is only initialized when first
+    /// accessed, which cannot happen before the outer type is initialized.
+    /// The constructor of the outer type does NOT reference <c>Keys</c>, so there is no
+    /// circular initialization.
+    /// </remarks>
+    private static void BuildKeysClass(StringBuilder sb, string[] keys)
+    {
         sb.AppendLine("    /// <summary>Provides strongly-typed <see cref=\"global::Irihi.Lolita.LolitaKey\"/> members for each resource key.</summary>");
         sb.AppendLine("    public static class Keys");
         sb.AppendLine("    {");
 
-        usedIdentifiers.Clear();
+        var usedIdentifiers = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var key in keys)
         {
@@ -326,13 +368,18 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
 
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
 
-        // ── Observable backing fields and public instance properties ─────────
-        var defaultValues = cultureData.TryGetValue(string.Empty, out var dv)
-            ? dv
-            : new Dictionary<string, string>();
-
-        usedIdentifiers.Clear();
+    /// <summary>
+    /// Builds the per-key <c>LolitaObservableString</c> backing fields and their
+    /// corresponding public <c>IObservable&lt;string?&gt;</c> properties.
+    /// </summary>
+    private static void BuildObservableMembers(
+        StringBuilder sb,
+        string[] keys,
+        Dictionary<string, string> defaultValues)
+    {
+        var usedIdentifiers = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var key in keys)
         {
@@ -352,16 +399,25 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             sb.AppendLine($"    public global::System.IObservable<string?> {identifier} => _lolita_{identifier};");
             sb.AppendLine();
         }
+    }
 
-        // ── Observable collection field (assigned in constructor) ────────────
+    /// <summary>Builds the <c>_lolita_observables</c> instance field declaration (assigned in constructor).</summary>
+    private static void BuildObservablesField(StringBuilder sb)
+    {
         sb.AppendLine("    private readonly global::System.Collections.Generic.IReadOnlyDictionary<string, global::Irihi.Lolita.LolitaObservableString> _lolita_observables;");
         sb.AppendLine();
+    }
 
-        // ── Runtime resources field ──────────────────────────────────────────
+    /// <summary>Builds the <c>_lolita_runtime</c> field that holds runtime-added resource overrides.</summary>
+    private static void BuildRuntimeResourcesField(StringBuilder sb)
+    {
         sb.AppendLine("    private readonly global::Irihi.Lolita.LolitaRuntimeResources _lolita_runtime = new global::Irihi.Lolita.LolitaRuntimeResources();");
         sb.AppendLine();
+    }
 
-        // ── UpdateCulture method (implements ILolitaManager) ─────────────────
+    /// <summary>Builds the <c>UpdateCulture</c> method that implements <c>ILolitaManager</c>.</summary>
+    private static void BuildUpdateCultureMethod(StringBuilder sb)
+    {
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// Switches all observable properties to the values for <paramref name=\"culture\"/>.");
         sb.AppendLine("    /// Falls back to the parent culture, then to the default (invariant) culture.");
@@ -392,8 +448,11 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
 
-        // ── GetObservable method (implements ILolitaManager) ──────────────────
+    /// <summary>Builds the <c>GetObservable</c> method that implements <c>ILolitaManager</c>.</summary>
+    private static void BuildGetObservableMethod(StringBuilder sb)
+    {
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// Returns the observable for the given resource key, or <c>null</c> if the key is not found.");
         sb.AppendLine("    /// </summary>");
@@ -403,17 +462,17 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        return _lolita_obs;");
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
 
-        // ── AddResources method (implements ILolitaManager) ──────────────────
+    /// <summary>Builds the <c>AddResources</c> method that implements <c>ILolitaManager</c>.</summary>
+    private static void BuildAddResourcesMethod(StringBuilder sb)
+    {
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// Adds or overrides resource entries for the given culture at runtime.");
         sb.AppendLine("    /// Call <see cref=\"UpdateCulture\"/> afterwards to apply the changes to all observables.");
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    public void AddResources(global::System.Globalization.CultureInfo culture, global::System.Collections.Generic.IReadOnlyDictionary<string, string> resources)");
         sb.AppendLine("        => _lolita_runtime.Add(culture, resources);");
-        sb.AppendLine("}");
-
-        return sb.ToString();
     }
 
     // -------------------------------------------------------------------------
