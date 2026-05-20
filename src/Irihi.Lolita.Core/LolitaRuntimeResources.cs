@@ -100,9 +100,6 @@ public sealed class LolitaRuntimeResources
                 return dict;
         }
 
-        if (store.TryGetValue(CultureInfo.InvariantCulture, out dict))
-            return dict;
-
-        return null;
+        return store.TryGetValue(CultureInfo.InvariantCulture, out dict) ? dict : null;
     }
 }
