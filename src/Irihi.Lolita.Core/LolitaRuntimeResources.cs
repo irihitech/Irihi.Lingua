@@ -26,7 +26,7 @@ public sealed class LolitaRuntimeResources
     private readonly object _lock = new();
 #endif
 
-    private readonly Dictionary<CultureInfo, IReadOnlyDictionary<string, string>> _store = new();
+    private volatile Dictionary<CultureInfo, IReadOnlyDictionary<string, string>> _store = new();
 
     /// <summary>
     /// Adds or updates resource entries for the given culture.
@@ -51,17 +51,22 @@ public sealed class LolitaRuntimeResources
 
         lock (_lock)
         {
-            if (_store.TryGetValue(culture, out var existing))
+            var newStore = new Dictionary<CultureInfo, IReadOnlyDictionary<string, string>>(_store);
+
+            if (newStore.TryGetValue(culture, out var existing))
             {
                 var merged = new Dictionary<string, string>(existing);
                 foreach (var kv in resources)
                     merged[kv.Key] = kv.Value;
-                _store[culture] = merged;
+
+                newStore[culture] = merged;
             }
             else
             {
-                _store[culture] = new Dictionary<string, string>(resources);
+                newStore[culture] = new Dictionary<string, string>(resources);
             }
+
+            _store = newStore;
         }
     }
 
@@ -82,27 +87,22 @@ public sealed class LolitaRuntimeResources
     {
         ArgumentNullException.ThrowIfNull(culture);
 
-        lock (_lock)
+        var store = _store;
+
+        if (store.TryGetValue(culture, out var dict))
+            return dict;
+
+        if (culture.Name.Length > 0)
         {
-            // Exact match
-            if (_store.TryGetValue(culture, out var dict))
-                return new Dictionary<string, string>(dict, StringComparer.Ordinal);
-
-            // Two-letter language fallback (e.g. "en" for "en-US").
-            // Guard against InvariantCulture (Name="") whose TwoLetterISOLanguageName is "iv".
-            if (culture.Name.Length > 0)
-            {
-                var twoLetter = culture.TwoLetterISOLanguageName;
-                if (twoLetter != culture.Name
-                    && _store.TryGetValue(CultureInfo.GetCultureInfo(twoLetter), out dict))
-                    return new Dictionary<string, string>(dict, StringComparer.Ordinal);
-            }
-
-            // Invariant/default fallback
-            if (_store.TryGetValue(CultureInfo.InvariantCulture, out dict))
-                return new Dictionary<string, string>(dict, StringComparer.Ordinal);
-
-            return null;
+            var twoLetter = culture.TwoLetterISOLanguageName;
+            if (twoLetter != culture.Name &&
+                store.TryGetValue(CultureInfo.GetCultureInfo(twoLetter), out dict))
+                return dict;
         }
+
+        if (store.TryGetValue(CultureInfo.InvariantCulture, out dict))
+            return dict;
+
+        return null;
     }
 }
