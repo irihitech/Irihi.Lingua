@@ -71,7 +71,17 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             ? null
             : classSymbol.ContainingNamespace.ToDisplayString();
 
-        return new ManagerInfo(classSymbol.Name, ns, resourcePath!);
+        var accessibility = classSymbol.DeclaredAccessibility switch
+        {
+            Accessibility.Internal => "internal",
+            Accessibility.Private => "private",
+            Accessibility.Protected => "protected",
+            Accessibility.ProtectedOrInternal => "protected internal",
+            Accessibility.ProtectedAndInternal => "private protected",
+            _ => "public",
+        };
+
+        return new ManagerInfo(classSymbol.Name, ns, resourcePath!, accessibility);
     }
 
     // -------------------------------------------------------------------------
@@ -224,7 +234,7 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
             sb.AppendLine();
         }
 
-        sb.AppendLine($"public partial class {info.ClassName} : global::Irihi.Lolita.ILolitaManager");
+        sb.AppendLine($"{info.Accessibility} partial class {info.ClassName} : global::Irihi.Lolita.ILolitaManager");
         sb.AppendLine("{");
 
         // ── Private constructor ──────────────────────────────────────────────
@@ -455,12 +465,14 @@ public sealed class LolitaManagerGenerator : IIncrementalGenerator
         public string ClassName { get; }
         public string? Namespace { get; }
         public string ResourcePath { get; }
+        public string Accessibility { get; }
 
-        public ManagerInfo(string className, string? ns, string resourcePath)
+        public ManagerInfo(string className, string? ns, string resourcePath, string accessibility)
         {
             ClassName = className;
             Namespace = ns;
             ResourcePath = resourcePath;
+            Accessibility = accessibility;
         }
     }
 }
