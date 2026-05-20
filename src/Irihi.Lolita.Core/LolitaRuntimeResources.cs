@@ -94,7 +94,7 @@ public sealed class LolitaRuntimeResources
             {
                 var twoLetter = culture.TwoLetterISOLanguageName;
                 if (twoLetter != culture.Name
-                    && _store.TryGetValue(new CultureInfo(twoLetter), out dict))
+                    && _store.TryGetValue(CultureInfo.GetCultureInfo(twoLetter), out dict))
                     return new Dictionary<string, string>(dict, StringComparer.Ordinal);
             }
 
