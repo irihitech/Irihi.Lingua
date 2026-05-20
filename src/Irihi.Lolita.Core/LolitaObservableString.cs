@@ -17,7 +17,7 @@ public sealed class LolitaObservableString : IObservable<string?>
     #else
     private readonly object _lock = new();
     #endif
-    private readonly List<IObserver<string?>> _observers = [];
+    private volatile IObserver<string?>[] _observers = [];
     private string? _currentValue;
 
     /// <summary>
@@ -28,16 +28,7 @@ public sealed class LolitaObservableString : IObservable<string?>
     /// <summary>
     /// Gets the most recently emitted value.
     /// </summary>
-    public string? CurrentValue
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _currentValue;
-            }
-        }
-    }
+    internal string? CurrentValue => Volatile.Read(ref _currentValue);
 
     /// <summary>
     /// Initializes a new instance of <see cref="LolitaObservableString"/> with the given key and initial value.
@@ -62,19 +53,13 @@ public sealed class LolitaObservableString : IObservable<string?>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="observer"/> is <c>null</c>.</exception>
     public IDisposable Subscribe(IObserver<string?> observer)
     {
-        if (observer is null)
-        {
-            throw new ArgumentNullException(nameof(observer));
-        }
-
+        ArgumentNullException.ThrowIfNull(observer);
         string? current;
         lock (_lock)
         {
-            _observers.Add(observer);
+            _observers = [.. _observers, observer];  // atomic array replace
             current = _currentValue;
         }
-
-        // Emit current value immediately (BehaviorSubject semantics)
         observer.OnNext(current);
         return new Subscription(this, observer);
     }
@@ -85,46 +70,30 @@ public sealed class LolitaObservableString : IObservable<string?>
     /// <param name="value">The new value to emit.</param>
     public void OnNext(string? value)
     {
-        if (_observers.Count == 0)
-        {
-            _currentValue = value;
-            return;
-        }
-        IObserver<string?>[] observers;
-        lock (_lock)
-        {
-            _currentValue = value;
-            observers = _observers.ToArray();
-        }
+        var observers = _observers;
+        // Always update value, but avoid lock when no one is listening
+        Volatile.Write(ref _currentValue, value);
 
         foreach (var observer in observers)
-        {
-            observer.OnNext(_currentValue);
-        }
+            observer.OnNext(value);
     }
 
     private void Unsubscribe(IObserver<string?> observer)
     {
         lock (_lock)
         {
-            _observers.Remove(observer);
+            _observers = _observers.Where(o => o != observer).ToArray();
         }
     }
 
     private sealed class Subscription(LolitaObservableString parent, IObserver<string?> observer) : IDisposable
     {
-        private LolitaObservableString? _parent = parent;
-        private IObserver<string?>? _observer = observer;
+        private int _disposed;
 
         public void Dispose()
         {
-            if (_parent != null && _observer != null)
-            {
-                _parent.Unsubscribe(_observer);
-            }
-
-            _parent = null;
-            _observer = null;
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+                parent.Unsubscribe(observer);
         }
     }
 }
