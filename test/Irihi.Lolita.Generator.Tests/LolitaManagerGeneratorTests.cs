@@ -163,6 +163,37 @@ public class LolitaManagerGeneratorTests
     }
 
     [TestMethod]
+    public void Generator_WithDefaultResx_ContainsAddResourcesMethod()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        StringAssert.Contains(source,
+            "public void AddResources(global::System.Globalization.CultureInfo culture, global::System.Collections.Generic.IReadOnlyDictionary<string, string> resources)");
+    }
+
+    [TestMethod]
+    public void Generator_WithDefaultResx_AddResourcesDelegatesToRuntimeField()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        StringAssert.Contains(source, "_lolita_runtime.Add(culture, resources)");
+    }
+
+    [TestMethod]
+    public void Generator_WithDefaultResx_ContainsRuntimeResourcesField()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        StringAssert.Contains(source, "global::Irihi.Lolita.LolitaRuntimeResources _lolita_runtime");
+    }
+
+    [TestMethod]
     public void Generator_WithDefaultResx_DefaultValuesEmbeddedInSource()
     {
         var result = RunGenerator(InputSource,
@@ -172,6 +203,7 @@ public class LolitaManagerGeneratorTests
         StringAssert.Contains(source, "My Application");
         StringAssert.Contains(source, "Hello, World!");
     }
+
 
     // ── Multiple cultures ────────────────────────────────────────────────────
 
@@ -183,9 +215,9 @@ public class LolitaManagerGeneratorTests
             ("Strings.zh-Hans.resx", ZhHansResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        // Both culture keys appear in _lolita_resources
-        StringAssert.Contains(source, "[\"\"]");      // default culture
-        StringAssert.Contains(source, "[\"zh-Hans\"]"); // zh-Hans culture
+        // Both culture keys appear in _lolita_resources via Add calls
+        StringAssert.Contains(source, "_lolita_r.Add(global::System.Globalization.CultureInfo.InvariantCulture,"); // default culture
+        StringAssert.Contains(source, "_lolita_r.Add(new global::System.Globalization.CultureInfo(\"zh-Hans\"),");  // zh-Hans culture
     }
 
     [TestMethod]
