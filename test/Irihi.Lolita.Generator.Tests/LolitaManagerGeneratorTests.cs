@@ -355,6 +355,37 @@ public class LolitaManagerGeneratorTests
             "Expected no namespace declaration for a global namespace class.");
     }
 
+    // ── Access level matching ─────────────────────────────────────────────────
+
+    [TestMethod]
+    public void Generator_InternalClass_GeneratesInternalPartialClass()
+    {
+        const string source = """
+            using Irihi.Lolita;
+
+            namespace TestApp;
+
+            [LolitaManager("./Resources/Strings.resx")]
+            internal partial class LanguageManager { }
+            """;
+
+        var result = RunGenerator(source, ("Strings.resx", DefaultResxContent));
+        var generatedSource = result.GeneratedSources[0].SourceText.ToString();
+
+        StringAssert.Contains(generatedSource, "internal partial class LanguageManager",
+            "Expected generated class to use 'internal' access modifier.");
+    }
+
+    [TestMethod]
+    public void Generator_PublicClass_GeneratesPublicPartialClass()
+    {
+        var result = RunGenerator(InputSource, ("Strings.resx", DefaultResxContent));
+        var generatedSource = result.GeneratedSources[0].SourceText.ToString();
+
+        StringAssert.Contains(generatedSource, "public partial class LanguageManager",
+            "Expected generated class to use 'public' access modifier.");
+    }
+
     // ── Compilation verification ─────────────────────────────────────────────
 
     [TestMethod]
