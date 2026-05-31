@@ -131,11 +131,11 @@ public class MainWindowViewModel
 <TextBlock Text="{Binding GreetingMessage^}" />
 ```
 
-### `LocalizeExtension` 标记扩展
+### `TranslateExtension` 标记扩展
 
-如果你不想通过 ViewModel 包装，也可以直接使用 `Localize` 标记扩展，并配合生成的 `Keys` 嵌套类。
+如果你不想通过 ViewModel 包装，也可以直接使用 `Translate` 标记扩展，并配合生成的 `Keys` 嵌套类。
 
-`LocalizeExtension` 已通过 `XmlnsDefinition` 注册到标准 Avalonia XML 命名空间（`https://github.com/avaloniaui`），因此无需额外声明该命名空间。
+`TranslateExtension` 已通过 `XmlnsDefinition` 注册到标准 Avalonia XML 命名空间（`https://github.com/avaloniaui`），因此无需额外声明该命名空间。
 只需要为包含 `LanguageManager` 的命名空间添加一个 `local:` 别名：
 
 ```xml
@@ -145,28 +145,28 @@ xmlns:local="using:YourAppNamespace"
 
 然后这样使用：
 ```xml
-<TextBlock Text="{Localize {x:Static local:LanguageManager+Keys.App_Title}}" />
-<TextBlock Text="{Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
+<TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.App_Title}}" />
+<TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
 ```
 
 该扩展会从 `Keys` 类中解析 `LinguaKey`，查找对应的 `IObservable<string?>`，并将其转换为 Avalonia 绑定，使其在文化变化时自动更新。
 
-### `LocalizeFormat` 标记扩展
+### `FormatTranslateExtension` 标记扩展
 
-当资源值是格式化字符串（例如 `"Page {0} {1}"`），并且你希望把本地化文本与动态值组合时，可以使用 `LocalizeFormat`。
+当资源值是格式化字符串（例如 `"Page {0} {1}"`），并且你希望把本地化文本与动态值组合时，可以使用 `FormatTranslateExtension`（在 XAML 中简写为 `FormatTranslate`）。
 
-`FormatKey` 指向格式模板，内部的 `LocalizeItem` 按顺序提供参数：
+`FormatKey` 指向格式模板，内部的 `TranslateEntry` 按顺序提供参数：
 
-- `LocalizeItem Key="..."`：把另一个本地化资源键作为参数。
-- `LocalizeItem Binding="..."`：把普通 Avalonia 绑定结果作为参数。
+- `TranslateEntry Key="..."`：把另一个本地化资源键作为参数。
+- `TranslateEntry Binding="..."`：把普通 Avalonia 绑定结果作为参数。
 
 ```xml
 <TextBlock>
     <TextBlock.Text>
-        <LocalizeFormat FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
-            <LocalizeItem Binding="{Binding #page.Value}" />
-            <LocalizeItem Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
-        </LocalizeFormat>
+        <FormatTranslate FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
+            <TranslateEntry Binding="{Binding #page.Value}" />
+            <TranslateEntry Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
+        </FormatTranslate>
     </TextBlock.Text>
 </TextBlock>
 ```

@@ -131,11 +131,11 @@ public class MainWindowViewModel
 <TextBlock Text="{Binding GreetingMessage^}" />
 ```
 
-### `LocalizeExtension` markup extension
+### `TranslateExtension` markup extension
 
-For direct XAML bindings without a view-model wrapper, use the `Localize` markup extension together with the generated `Keys` nested class.
+For direct XAML bindings without a view-model wrapper, use the `Translate` markup extension together with the generated `Keys` nested class.
 
-`LocalizeExtension` is registered under the standard Avalonia XML namespace (`https://github.com/avaloniaui`) via `XmlnsDefinition`, so no additional namespace declaration is required.
+`TranslateExtension` is registered under the standard Avalonia XML namespace (`https://github.com/avaloniaui`) via `XmlnsDefinition`, so no additional namespace declaration is required.
 Add only a `local:` alias for the namespace that contains your `LanguageManager`:
 
 ```xml
@@ -147,28 +147,28 @@ Add only a `local:` alias for the namespace that contains your `LanguageManager`
 
 Then use the extension:
 ```xml
-<TextBlock Text="{Localize {x:Static local:LanguageManager+Keys.App_Title}}" />
-<TextBlock Text="{Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
+<TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.App_Title}}" />
+<TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
 ```
 
 The extension resolves the `LinguaKey` from the `Keys` class, looks up the corresponding `IObservable<string?>` and converts it into an Avalonia binding that updates automatically when the culture changes.
 
-### `LocalizeFormat` markup extension
+### `FormatTranslateExtension` markup extension
 
-Use `LocalizeFormat` when the resource is a format string (for example, `"Page {0} {1}"`) and you need to combine localized text with dynamic values.
+Use `FormatTranslateExtension` (or `FormatTranslate` in XAML) when the resource is a format string (for example, `"Page {0} {1}"`) and you need to combine localized text with dynamic values.
 
-`FormatKey` points to the format template, and nested `LocalizeItem` elements provide arguments in order:
+`FormatKey` points to the format template, and nested `TranslateEntry` elements provide arguments in order:
 
-- `LocalizeItem Key="..."` uses another localized key as an argument.
-- `LocalizeItem Binding="..."` uses a normal Avalonia binding as an argument.
+- `TranslateEntry Key="..."` uses another localized key as an argument.
+- `TranslateEntry Binding="..."` uses a normal Avalonia binding as an argument.
 
 ```xml
 <TextBlock>
     <TextBlock.Text>
-        <LocalizeFormat FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
-            <LocalizeItem Binding="{Binding #page.Value}" />
-            <LocalizeItem Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
-        </LocalizeFormat>
+        <FormatTranslate FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
+            <TranslateEntry Binding="{Binding #page.Value}" />
+            <TranslateEntry Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
+        </FormatTranslate>
     </TextBlock.Text>
 </TextBlock>
 ```
