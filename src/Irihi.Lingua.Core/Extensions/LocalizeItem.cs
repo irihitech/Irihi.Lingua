@@ -1,6 +1,6 @@
 ﻿using Avalonia.Data;
 
-namespace Irihi.Lingua;
+namespace Irihi.Lingua.Extensions;
 
 public class LocalizeItem
 {

@@ -4,9 +4,9 @@ using Avalonia.Data.Converters;
 using Avalonia.Markup.Xaml;
 using Avalonia.Metadata;
 
-namespace Irihi.Lingua;
+namespace Irihi.Lingua.Extensions;
 
-public class LocalizeFormatExtension : MarkupExtension
+public sealed class LocalizeFormatExtension : MarkupExtension
 {
     private static readonly LocalizeFormatConverter SharedConverter = new();
     public IMultiValueConverter? Converter { get; set; }

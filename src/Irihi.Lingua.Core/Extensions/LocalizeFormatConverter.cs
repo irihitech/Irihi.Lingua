@@ -2,9 +2,9 @@
 using Avalonia;
 using Avalonia.Data.Converters;
 
-namespace Irihi.Lingua;
+namespace Irihi.Lingua.Extensions;
 
-public class LocalizeFormatConverter: IMultiValueConverter
+public sealed class LocalizeFormatConverter: IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
