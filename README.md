@@ -153,3 +153,26 @@ Then use the extension:
 
 The extension resolves the `LinguaKey` from the `Keys` class, looks up the corresponding `IObservable<string?>` and converts it into an Avalonia binding that updates automatically when the culture changes.
 
+### `LocalizeFormat` markup extension
+
+Use `LocalizeFormat` when the resource is a format string (for example, `"Page {0} {1}"`) and you need to combine localized text with dynamic values.
+
+`FormatKey` points to the format template, and nested `LocalizeItem` elements provide arguments in order:
+
+- `LocalizeItem Key="..."` uses another localized key as an argument.
+- `LocalizeItem Binding="..."` uses a normal Avalonia binding as an argument.
+
+```xml
+<TextBlock>
+    <TextBlock.Text>
+        <LocalizeFormat FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
+            <LocalizeItem Binding="{Binding #page.Value}" />
+            <LocalizeItem Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
+        </LocalizeFormat>
+    </TextBlock.Text>
+</TextBlock>
+```
+
+In this example, `{0}` is filled by `#page.Value` and `{1}` is filled by `Greeting_Message`.
+When either the current culture changes or any bound argument value changes, the final text is recomputed automatically.
+

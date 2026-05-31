@@ -150,3 +150,27 @@ xmlns:local="using:YourAppNamespace"
 ```
 
 该扩展会从 `Keys` 类中解析 `LinguaKey`，查找对应的 `IObservable<string?>`，并将其转换为 Avalonia 绑定，使其在文化变化时自动更新。
+
+### `LocalizeFormat` 标记扩展
+
+当资源值是格式化字符串（例如 `"Page {0} {1}"`），并且你希望把本地化文本与动态值组合时，可以使用 `LocalizeFormat`。
+
+`FormatKey` 指向格式模板，内部的 `LocalizeItem` 按顺序提供参数：
+
+- `LocalizeItem Key="..."`：把另一个本地化资源键作为参数。
+- `LocalizeItem Binding="..."`：把普通 Avalonia 绑定结果作为参数。
+
+```xml
+<TextBlock>
+    <TextBlock.Text>
+        <LocalizeFormat FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
+            <LocalizeItem Binding="{Binding #page.Value}" />
+            <LocalizeItem Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
+        </LocalizeFormat>
+    </TextBlock.Text>
+</TextBlock>
+```
+
+在这个示例中，`{0}` 来自 `#page.Value`，`{1}` 来自 `Greeting_Message`。
+当当前文化变化，或任意参数绑定值变化时，最终文本都会自动重新计算。
+
