@@ -13,6 +13,7 @@
     <PackageTags>source-generator;i18n;avalonia;resx</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>irihi.png</PackageIcon>
     <RepositoryUrl>https://github.com/rabbitism/Irihi.Lingua</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <IsPackable>true</IsPackable>
@@ -20,6 +21,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\irihi.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
