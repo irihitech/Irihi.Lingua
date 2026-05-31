@@ -9,4 +9,7 @@
   <data name="Switch_Language" xml:space="preserve">
     <value>切换到英文</value>
   </data>
+  <data name="Format Template" xml:space="preserve">
+    <value>{0}, 第{1}页</value>
+  </data>
 </root>

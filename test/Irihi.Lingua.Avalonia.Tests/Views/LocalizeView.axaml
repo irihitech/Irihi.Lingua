@@ -18,6 +18,17 @@
         <!-- LocalizeExtension — mirrors the {Localize {x:Static ...}} TextBlock in the demo -->
         <TextBlock x:Name="LocalizeBound"
                    Text="{Localize {x:Static local:TestLanguageManager+Keys.Greeting_Message}}" />
+        
+        <TextBlock x:Name="Input" />
+        
+        <TextBlock x:Name="Page">
+            <TextBlock.Text>
+                <LocalizeFormat FormatKey="{x:Static local:TestLanguageManager+Keys.Format_Template}">
+                    <LocalizeItem Key="{x:Static local:TestLanguageManager+Keys.Greeting_Message}" />
+                    <LocalizeItem Binding="{Binding #Input.Text}" />
+                </LocalizeFormat>
+            </TextBlock.Text>
+        </TextBlock>
 
     </StackPanel>
 </UserControl>

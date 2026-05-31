@@ -9,4 +9,7 @@
   <data name="Switch_Language" xml:space="preserve">
     <value>Switch to Chinese</value>
   </data>
+  <data name="Page_Template" xml:space="preserve">
+    <value>Page {0} {1}</value>
+  </data>
 </root>

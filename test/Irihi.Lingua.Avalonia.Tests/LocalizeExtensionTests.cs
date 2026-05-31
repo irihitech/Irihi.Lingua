@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Irihi.Lingua.Avalonia.Tests.ViewModels;
 using Irihi.Lingua.Avalonia.Tests.Views;
+using Irihi.Lingua.Extensions;
 using Xunit;
 
 namespace Irihi.Lingua.Avalonia.Tests;

@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Data;
 using Avalonia.Markup.Xaml;
 
-namespace Irihi.Lingua;
+namespace Irihi.Lingua.Extensions;
 
 /// <summary>
 /// Markup extension that creates a one-way binding to the localized string
