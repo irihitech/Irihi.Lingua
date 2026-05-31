@@ -1,4 +1,4 @@
-# Irihi.Lolita
+# Irihi.Lingua
 
 A C# source generator that turns `.resx` resource files into a strongly-typed, reactive i18n manager.
 Each resource key becomes an `IObservable<string?>` property that pushes a new value whenever the active culture changes — no manual `INotifyPropertyChanged` wiring required.
@@ -8,7 +8,7 @@ Each resource key becomes an `IObservable<string?>` property that pushes a new v
 Add the NuGet package to your project:
 
 ```xml
-<PackageReference Include="Irihi.Lolita" Version="0.1.0" />
+<PackageReference Include="Irihi.Lingua" Version="0.1.0" />
 ```
 
 The package bundles both the runtime library and the Roslyn source generator. No separate analyzer reference is needed.
@@ -59,11 +59,11 @@ The generator reads all `.resx` files listed as `AdditionalFiles` in your projec
 
 ### 3. Declare the language manager
 
-Apply `[LolitaManager]` to a `partial class`, pointing it at the base `.resx` file.
+Apply `[LinguaManager]` to a `partial class`, pointing it at the base `.resx` file.
 The source generator fills in the rest at build time.
 
 ```csharp
-[LolitaManager("./Resources/Strings.resx")]
+[LinguaManager("./Resources/Strings.resx")]
 public partial class LanguageManager;
 ```
 
@@ -135,17 +135,17 @@ Then use the extension:
 <TextBlock Text="{Localize {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
 ```
 
-The extension resolves the `LolitaKey` from the `Keys` class, looks up the corresponding `IObservable<string?>` and converts it into an Avalonia binding that updates automatically when the culture changes.
+The extension resolves the `LinguaKey` from the `Keys` class, looks up the corresponding `IObservable<string?>` and converts it into an Avalonia binding that updates automatically when the culture changes.
 
 ---
 
 ## API Reference
 
-### `LolitaManagerAttribute`
+### `LinguaManagerAttribute`
 
 ```csharp
 [AttributeUsage(AttributeTargets.Class)]
-public sealed class LolitaManagerAttribute(string resourcePath) : Attribute
+public sealed class LinguaManagerAttribute(string resourcePath) : Attribute
 ```
 
 Apply to a `partial class` to trigger code generation.
@@ -153,29 +153,29 @@ Apply to a `partial class` to trigger code generation.
 
 ### Generated class members
 
-Given a `partial class LanguageManager` decorated with `[LolitaManager]`, the generator emits:
+Given a `partial class LanguageManager` decorated with `[LinguaManager]`, the generator emits:
 
 | Member | Description |
 |---|---|
-| `static readonly ILolitaManager Instance` | Singleton accessor. |
+| `static readonly ILinguaManager Instance` | Singleton accessor. |
 | `IObservable<string?> <Key>` | One property per resource key (e.g. `App_Title`). |
 | `void UpdateCulture(CultureInfo)` | Switches culture and pushes new values to all observers. |
 | `IObservable<string?>? GetObservable(string key)` | Looks up an observable by raw key name. |
-| `static class Keys` | Nested class with a `LolitaKey` constant for every resource key. |
+| `static class Keys` | Nested class with a `LinguaKey` constant for every resource key. |
 
-### `ILolitaManager`
+### `ILinguaManager`
 
 ```csharp
-public interface ILolitaManager
+public interface ILinguaManager
 {
     void UpdateCulture(CultureInfo culture);
     IObservable<string?>? GetObservable(string key);
 }
 ```
 
-### `LolitaKey`
+### `LinguaKey`
 
-A value type that pairs a raw resource key string with its owning `ILolitaManager`.
+A value type that pairs a raw resource key string with its owning `ILinguaManager`.
 Used as the argument to `LocalizeExtension` and implicitly convertible to `string?`.
 
 ```csharp

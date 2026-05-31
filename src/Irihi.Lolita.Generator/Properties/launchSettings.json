@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Irihi.Lolita.Demo": {
-      "commandName": "DebugRoslynComponent",
-      "targetProject": "../../demo/Irihi.Lolita.Demo/Irihi.Lolita.Demo.csproj"
-    }
-  }
-}

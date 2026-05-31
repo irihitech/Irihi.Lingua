@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Irihi.Lingua.Demo": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "../../demo/Irihi.Lingua.Demo/Irihi.Lingua.Demo.csproj"
+    }
+  }
+}

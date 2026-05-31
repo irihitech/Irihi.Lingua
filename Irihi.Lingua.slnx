@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/benchmark/" />
+  <Folder Name="/demo/">
+    <Project Path="demo/Irihi.Lingua.Demo/Irihi.Lingua.Demo.csproj" />
+    <Project Path="demo/Irihi.Lingua.AvaloniaDemo/Irihi.Lingua.AvaloniaDemo.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Irihi.Lingua.Core/Irihi.Lingua.Core.csproj" />
+    <Project Path="src/Irihi.Lingua.Generator/Irihi.Lingua.Generator.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Irihi.Lingua.Core.Tests/Irihi.Lingua.Core.Tests.csproj" />
+    <Project Path="test/Irihi.Lingua.Generator.Tests/Irihi.Lingua.Generator.Tests.csproj" />
+    <Project Path="test/Irihi.Lingua.Avalonia.Tests/Irihi.Lingua.Avalonia.Tests.csproj" />
+  </Folder>
+</Solution>

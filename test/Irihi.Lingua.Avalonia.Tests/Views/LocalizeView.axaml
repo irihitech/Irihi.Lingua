@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Irihi.Lingua.Avalonia.Tests.ViewModels"
+             xmlns:local="using:Irihi.Lingua.Avalonia.Tests"
+             x:Class="Irihi.Lingua.Avalonia.Tests.Views.LocalizeView"
+             x:DataType="vm:LocalizeViewModel">
+
+    <StackPanel Spacing="8" Margin="16">
+
+        <!-- ViewModel stream binding — mirrors {Binding AppTitle^} in the demo -->
+        <TextBlock x:Name="AppTitleBound"
+                   Text="{Binding AppTitle^}" />
+
+        <!-- ViewModel stream binding — mirrors {Binding GreetingMessage^} in the demo -->
+        <TextBlock x:Name="GreetingMessageBound"
+                   Text="{Binding GreetingMessage^}" />
+
+        <!-- LocalizeExtension — mirrors the {Localize {x:Static ...}} TextBlock in the demo -->
+        <TextBlock x:Name="LocalizeBound"
+                   Text="{Localize {x:Static local:TestLanguageManager+Keys.Greeting_Message}}" />
+
+    </StackPanel>
+</UserControl>
