@@ -4,11 +4,10 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Irihi.Lingua.Generator.Tests;
 
-[TestClass]
 public class LinguaManagerGeneratorTests
 {
     // ── Sample resx content ──────────────────────────────────────────────────
@@ -48,166 +47,165 @@ public class LinguaManagerGeneratorTests
 
     // ── Basic generation ─────────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ProducesOneSourceFile()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
-        Assert.AreEqual(0, result.Diagnostics.Length,
-            $"Expected no diagnostics, got: {string.Join(", ", result.Diagnostics)}");
-        Assert.AreEqual(1, result.GeneratedSources.Length,
-            "Expected exactly one generated source file.");
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedSources);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_GeneratesCorrectFileName()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
-        Assert.AreEqual("LanguageManager.LinguaManager.g.cs",
+        Assert.Equal("LanguageManager.LinguaManager.g.cs",
             result.GeneratedSources[0].HintName);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_GeneratedSourceContainsClassName()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "public partial class LanguageManager");
+        Assert.Contains("public partial class LanguageManager", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_GeneratedSourceContainsNamespace()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "namespace TestApp;");
+        Assert.Contains("namespace TestApp;", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ImplementsILinguaManager()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, ": global::Irihi.Lingua.ILinguaManager");
+        Assert.Contains(": global::Irihi.Lingua.ILinguaManager", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ContainsInstanceSingleton()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "public static readonly LanguageManager Instance");
+        Assert.Contains("public static readonly LanguageManager Instance", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ContainsKeysNestedClass()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "public static class Keys");
+        Assert.Contains("public static class Keys", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_KeysContainsExpectedMembers()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "public static readonly global::Irihi.Lingua.LinguaKey App_Title");
-        StringAssert.Contains(source, "public static readonly global::Irihi.Lingua.LinguaKey Greeting_Message");
+        Assert.Contains("public static readonly global::Irihi.Lingua.LinguaKey App_Title", source);
+        Assert.Contains("public static readonly global::Irihi.Lingua.LinguaKey Greeting_Message", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ContainsObservableProperties()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "public global::System.IObservable<string?> App_Title");
-        StringAssert.Contains(source, "public global::System.IObservable<string?> Greeting_Message");
+        Assert.Contains("public global::System.IObservable<string?> App_Title", source);
+        Assert.Contains("public global::System.IObservable<string?> Greeting_Message", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ContainsUpdateCultureMethod()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "public void UpdateCulture(global::System.Globalization.CultureInfo culture)");
+        Assert.Contains("public void UpdateCulture(global::System.Globalization.CultureInfo culture)", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ContainsGetObservableMethod()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "public global::System.IObservable<string?>? GetObservable(string key)");
+        Assert.Contains("public global::System.IObservable<string?>? GetObservable(string key)", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ContainsAddResourcesMethod()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source,
-            "public void AddResources(global::System.Globalization.CultureInfo culture, global::System.Collections.Generic.IReadOnlyDictionary<string, string> resources)");
+        Assert.Contains(
+            "public void AddResources(global::System.Globalization.CultureInfo culture, global::System.Collections.Generic.IReadOnlyDictionary<string, string> resources)",
+            source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_AddResourcesDelegatesToRuntimeField()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "_lingua_runtime.Add(culture, resources)");
+        Assert.Contains("_lingua_runtime.Add(culture, resources)", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_ContainsRuntimeResourcesField()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "global::Irihi.Lingua.LinguaRuntimeResources _lingua_runtime");
+        Assert.Contains("global::Irihi.Lingua.LinguaRuntimeResources _lingua_runtime", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithDefaultResx_DefaultValuesEmbeddedInSource()
     {
         var result = RunGenerator(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "My Application");
-        StringAssert.Contains(source, "Hello, World!");
+        Assert.Contains("My Application", source);
+        Assert.Contains("Hello, World!", source);
     }
 
 
     // ── Multiple cultures ────────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithCultureVariant_IncludesAllCulturesInResources()
     {
         var result = RunGenerator(InputSource,
@@ -216,11 +214,11 @@ public class LinguaManagerGeneratorTests
 
         var source = result.GeneratedSources[0].SourceText.ToString();
         // Both culture keys appear in _lingua_resources via Add calls
-        StringAssert.Contains(source, "_lingua_r.Add(global::System.Globalization.CultureInfo.InvariantCulture,"); // default culture
-        StringAssert.Contains(source, "_lingua_r.Add(new global::System.Globalization.CultureInfo(\"zh-Hans\"),");  // zh-Hans culture
+        Assert.Contains("_lingua_r.Add(global::System.Globalization.CultureInfo.InvariantCulture,", source); // default culture
+        Assert.Contains("_lingua_r.Add(new global::System.Globalization.CultureInfo(\"zh-Hans\"),", source);  // zh-Hans culture
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_WithCultureVariant_LocalizedValuesEmbedded()
     {
         var result = RunGenerator(InputSource,
@@ -228,11 +226,11 @@ public class LinguaManagerGeneratorTests
             ("Strings.zh-Hans.resx", ZhHansResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "我的应用程序");
-        StringAssert.Contains(source, "你好，世界！");
+        Assert.Contains("我的应用程序", source);
+        Assert.Contains("你好，世界！", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_CultureVariantOnly_UsesVariantKeysForGeneration()
     {
         // When there is only a culture-specific file (no default), the generator
@@ -240,24 +238,23 @@ public class LinguaManagerGeneratorTests
         var result = RunGenerator(InputSource,
             ("Strings.zh-Hans.resx", ZhHansResxContent));
 
-        Assert.AreEqual(1, result.GeneratedSources.Length);
+        Assert.Single(result.GeneratedSources);
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "App_Title");
-        StringAssert.Contains(source, "Greeting_Message");
+        Assert.Contains("App_Title", source);
+        Assert.Contains("Greeting_Message", source);
     }
 
     // ── No / empty / invalid resx ────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_NoResxFiles_ProducesNoOutput()
     {
         var result = RunGenerator(InputSource);
 
-        Assert.AreEqual(0, result.GeneratedSources.Length,
-            "Expected no generated files when no resx is present.");
+        Assert.Empty(result.GeneratedSources);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_ResxFileWithNoDataElements_ProducesNoOutput()
     {
         const string emptyResx = """
@@ -268,11 +265,10 @@ public class LinguaManagerGeneratorTests
         var result = RunGenerator(InputSource,
             ("Strings.resx", emptyResx));
 
-        Assert.AreEqual(0, result.GeneratedSources.Length,
-            "Expected no generated files when resx has no data elements.");
+        Assert.Empty(result.GeneratedSources);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_InvalidXml_ProducesNoOutput()
     {
         const string invalidResx = "this is not xml at all <<<";
@@ -280,11 +276,10 @@ public class LinguaManagerGeneratorTests
         var result = RunGenerator(InputSource,
             ("Strings.resx", invalidResx));
 
-        Assert.AreEqual(0, result.GeneratedSources.Length,
-            "Expected no generated files when resx XML is invalid.");
+        Assert.Empty(result.GeneratedSources);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_UnrelatedResxFile_IsIgnored()
     {
         // Providing a resx whose base name does not match the configured path
@@ -292,13 +287,12 @@ public class LinguaManagerGeneratorTests
         var result = RunGenerator(InputSource,
             ("OtherFile.resx", DefaultResxContent));
 
-        Assert.AreEqual(0, result.GeneratedSources.Length,
-            "Expected no generated files when resx base name does not match.");
+        Assert.Empty(result.GeneratedSources);
     }
 
     // ── Identifier sanitization ──────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_KeyWithSpecialChars_SanitizesIdentifier()
     {
         const string resx = """
@@ -314,10 +308,10 @@ public class LinguaManagerGeneratorTests
         var source = result.GeneratedSources[0].SourceText.ToString();
 
         // Dots are converted to underscores
-        StringAssert.Contains(source, "some_dotted_key");
+        Assert.Contains("some_dotted_key", source);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_KeyStartingWithDigit_PrependedWithUnderscore()
     {
         const string resx = """
@@ -333,12 +327,12 @@ public class LinguaManagerGeneratorTests
         var source = result.GeneratedSources[0].SourceText.ToString();
 
         // Identifiers starting with a digit get an underscore prepended
-        StringAssert.Contains(source, "_1_key");
+        Assert.Contains("_1_key", source);
     }
 
     // ── No namespace ─────────────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_NoNamespace_OmitsNamespaceDeclaration()
     {
         const string source = """
@@ -351,13 +345,13 @@ public class LinguaManagerGeneratorTests
         var result = RunGenerator(source, ("Strings.resx", DefaultResxContent));
         var generatedSource = result.GeneratedSources[0].SourceText.ToString();
 
-        Assert.IsFalse(generatedSource.Contains("namespace "),
+        Assert.False(generatedSource.Contains("namespace "),
             "Expected no namespace declaration for a global namespace class.");
     }
 
     // ── Access level matching ─────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_InternalClass_GeneratesInternalPartialClass()
     {
         const string source = """
@@ -372,65 +366,60 @@ public class LinguaManagerGeneratorTests
         var result = RunGenerator(source, ("Strings.resx", DefaultResxContent));
         var generatedSource = result.GeneratedSources[0].SourceText.ToString();
 
-        StringAssert.Contains(generatedSource, "internal partial class LanguageManager",
-            "Expected generated class to use 'internal' access modifier.");
+        Assert.Contains("internal partial class LanguageManager", generatedSource);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_PublicClass_GeneratesPublicPartialClass()
     {
         var result = RunGenerator(InputSource, ("Strings.resx", DefaultResxContent));
         var generatedSource = result.GeneratedSources[0].SourceText.ToString();
 
-        StringAssert.Contains(generatedSource, "public partial class LanguageManager",
-            "Expected generated class to use 'public' access modifier.");
+        Assert.Contains("public partial class LanguageManager", generatedSource);
     }
 
     // ── Compilation verification ─────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_GeneratedSource_CompilesWithoutErrors()
     {
         var (outputCompilation, _) = RunGeneratorWithCompilation(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         // Filter only errors (ignore warnings)
-        var errors = outputCompilation.GetDiagnostics()
+        var errors = outputCompilation.GetDiagnostics(TestContext.Current.CancellationToken)
             .Where(d => d.Severity == DiagnosticSeverity.Error)
             .ToList();
 
-        Assert.AreEqual(0, errors.Count,
-            $"Generated code has compilation errors:\n{string.Join("\n", errors.Select(e => e.ToString()))}");
+        Assert.Empty(errors);
     }
 
     // ── Run result structure ─────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_RunResult_HasNoException()
     {
         var (driver, _) = RunGeneratorFull(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var runResult = driver.GetRunResult();
-        Assert.AreEqual(1, runResult.Results.Length);
-        Assert.IsNull(runResult.Results[0].Exception,
-            "Generator threw an unexpected exception.");
+        Assert.Single(runResult.Results);
+        Assert.Null(runResult.Results[0].Exception);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_RunResult_GeneratorDiagnosticsAreEmpty()
     {
         var (driver, _) = RunGeneratorFull(InputSource,
             ("Strings.resx", DefaultResxContent));
 
         var runResult = driver.GetRunResult();
-        Assert.AreEqual(0, runResult.Diagnostics.Length,
-            $"Expected no diagnostics, got: {string.Join(", ", runResult.Diagnostics)}");
+        Assert.Empty(runResult.Diagnostics);
     }
 
     // ── Duplicate keys and reachable edge cases ──────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Generator_DuplicateKeys_DeduplicatesIdentifiers()
     {
         // Two keys that sanitize to the same identifier (dots → underscores)
@@ -448,17 +437,15 @@ public class LinguaManagerGeneratorTests
             """;
 
         var result = RunGenerator(InputSource, ("Strings.resx", resx));
-        Assert.AreEqual(1, result.GeneratedSources.Length);
+        Assert.Single(result.GeneratedSources);
         var source = result.GeneratedSources[0].SourceText.ToString();
-
-        // Only one LinguaKey member with the sanitized identifier
         var count = Regex
             .Matches(source, @"public static readonly global::Irihi\.Lingua\.LinguaKey key_foo")
             .Count;
-        Assert.AreEqual(1, count, "Duplicate sanitized identifier should appear only once in Keys class.");
+        Assert.Equal(1, count);
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_EmptyCultureTag_IsIgnored()
     {
         // A file named "Strings..resx" would produce an empty culture tag after
@@ -467,17 +454,16 @@ public class LinguaManagerGeneratorTests
             ("Strings.resx", DefaultResxContent),
             ("Strings..resx", ZhHansResxContent));
 
-        Assert.AreEqual(1, result.GeneratedSources.Length,
-            "Expected exactly one generated file — the double-dot resx should be ignored.");
+        Assert.Single(result.GeneratedSources);
         var source = result.GeneratedSources[0].SourceText.ToString();
         // Only the default culture key should appear in resources
         // If the empty-culture file were accidentally included, its key would
         // appear as ["."]. Verify it does not.
-        const string spuriousEmptyCultureKey = "[\".\"]\"";        Assert.IsFalse(source.Contains(spuriousEmptyCultureKey),
+        const string spuriousEmptyCultureKey = "[\".\"]\"";        Assert.False(source.Contains(spuriousEmptyCultureKey),
             "The spurious '.' culture key must not appear in the generated code.");
     }
 
-    [TestMethod]
+    [Fact]
     public void Generator_CultureVariantWithInvalidXml_GeneratesOutputUsingDefaultCulture()
     {
         // When a culture-variant file has malformed XML, ParseValues catches the
@@ -489,10 +475,9 @@ public class LinguaManagerGeneratorTests
             ("Strings.resx", DefaultResxContent),
             ("Strings.zh-Hans.resx", invalidCultureResx));
 
-        Assert.AreEqual(1, result.GeneratedSources.Length,
-            "Expected output even when a culture variant file has invalid XML.");
+        Assert.Single(result.GeneratedSources);
         var source = result.GeneratedSources[0].SourceText.ToString();
-        StringAssert.Contains(source, "App_Title");
+        Assert.Contains("App_Title", source);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
