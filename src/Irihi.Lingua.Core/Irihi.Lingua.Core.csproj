@@ -8,7 +8,7 @@
     <!-- NuGet package metadata -->
     <PackageId>Irihi.Lingua</PackageId>
     <Version>0.1.2</Version>
-    <Authors>rabbitism</Authors>
+    <Authors>IRIHI Technology Co., Ltd.</Authors>
     <Description>Source generator package for generating i18n facilities for Avalonia projects from .resx files.</Description>
     <PackageTags>source-generator;i18n;avalonia;resx</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
