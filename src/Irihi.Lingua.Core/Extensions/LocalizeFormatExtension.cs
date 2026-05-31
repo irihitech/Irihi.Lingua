@@ -21,7 +21,7 @@ public sealed class LocalizeFormatExtension : MarkupExtension
     {
         var formatObservable = FormatKey?.Manager.GetObservable(FormatKey.Key);
         
-        if (formatObservable is null) return AvaloniaProperty.UnsetValue;
+        if (formatObservable is null) return new MultiBinding();
 
         var bindings = new List<BindingBase> { formatObservable.ToBinding() };
 
