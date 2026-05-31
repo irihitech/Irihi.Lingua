@@ -1,73 +1,72 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Irihi.Lingua.Tests;
 
-[TestClass]
 public class LinguaObservableStringTests
 {
     // ── Constructor ──────────────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Constructor_NullKey_ThrowsArgumentNullException()
     {
-        Assert.ThrowsException<ArgumentNullException>(() =>
+        Assert.Throws<ArgumentNullException>(() =>
             new LinguaObservableString(null!, "value"));
     }
 
-    [TestMethod]
+    [Fact]
     public void Constructor_SetsKey()
     {
         var obs = new LinguaObservableString("MyKey", "initial");
-        Assert.AreEqual("MyKey", obs.Key);
+        Assert.Equal("MyKey", obs.Key);
     }
 
-    [TestMethod]
+    [Fact]
     public void Constructor_SetsInitialCurrentValue()
     {
         var obs = new LinguaObservableString("key", "hello");
-        Assert.AreEqual("hello", obs.CurrentValue);
+        Assert.Equal("hello", obs.CurrentValue);
     }
 
-    [TestMethod]
+    [Fact]
     public void Constructor_NullInitialValue_CurrentValueIsNull()
     {
         var obs = new LinguaObservableString("key", null);
-        Assert.IsNull(obs.CurrentValue);
+        Assert.Null(obs.CurrentValue);
     }
 
     // ── Subscribe ────────────────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Subscribe_NullObserver_ThrowsArgumentNullException()
     {
         var obs = new LinguaObservableString("key", "value");
-        Assert.ThrowsException<ArgumentNullException>(() =>
+        Assert.Throws<ArgumentNullException>(() =>
             obs.Subscribe(null!));
     }
 
-    [TestMethod]
+    [Fact]
     public void Subscribe_ImmediatelyEmitsCurrentValue()
     {
         var obs = new LinguaObservableString("key", "initial");
         var received = new List<string?>();
         obs.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
-        Assert.AreEqual(1, received.Count);
-        Assert.AreEqual("initial", received[0]);
+        var single = Assert.Single(received);
+        Assert.Equal("initial", single);
     }
 
-    [TestMethod]
+    [Fact]
     public void Subscribe_ImmediatelyEmitsNullCurrentValue()
     {
         var obs = new LinguaObservableString("key", null);
         var received = new List<string?>();
         obs.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
-        Assert.AreEqual(1, received.Count);
-        Assert.IsNull(received[0]);
+        Assert.Single(received);
+        Assert.Null(received[0]);
     }
 
-    [TestMethod]
+    [Fact]
     public void Subscribe_MultipleObservers_AllReceiveCurrentValue()
     {
         var obs = new LinguaObservableString("key", "val");
@@ -76,21 +75,21 @@ public class LinguaObservableStringTests
         obs.Subscribe(new DelegateObserver<string?>(_ => countA++));
         obs.Subscribe(new DelegateObserver<string?>(_ => countB++));
 
-        Assert.AreEqual(1, countA);
-        Assert.AreEqual(1, countB);
+        Assert.Equal(1, countA);
+        Assert.Equal(1, countB);
     }
 
     // ── OnNext ───────────────────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void OnNext_UpdatesCurrentValue()
     {
         var obs = new LinguaObservableString("key", "initial");
         obs.OnNext("updated");
-        Assert.AreEqual("updated", obs.CurrentValue);
+        Assert.Equal("updated", obs.CurrentValue);
     }
 
-    [TestMethod]
+    [Fact]
     public void OnNext_NotifiesSubscriber()
     {
         var obs = new LinguaObservableString("key", "initial");
@@ -99,20 +98,20 @@ public class LinguaObservableStringTests
 
         obs.OnNext("next");
 
-        Assert.AreEqual(2, received.Count); // initial + next
-        Assert.AreEqual("initial", received[0]);
-        Assert.AreEqual("next", received[1]);
+        Assert.Equal(2, received.Count); // initial + next
+        Assert.Equal("initial", received[0]);
+        Assert.Equal("next", received[1]);
     }
 
-    [TestMethod]
+    [Fact]
     public void OnNext_NullValue_UpdatesCurrentValueToNull()
     {
         var obs = new LinguaObservableString("key", "initial");
         obs.OnNext(null);
-        Assert.IsNull(obs.CurrentValue);
+        Assert.Null(obs.CurrentValue);
     }
 
-    [TestMethod]
+    [Fact]
     public void OnNext_NotifiesMultipleSubscribers()
     {
         var obs = new LinguaObservableString("key", "a");
@@ -124,23 +123,23 @@ public class LinguaObservableStringTests
         obs.OnNext("b");
 
         // each observer got the initial value + the new one
-        Assert.AreEqual(2, receivedA.Count);
-        Assert.AreEqual("b", receivedA[1]);
-        Assert.AreEqual(2, receivedB.Count);
-        Assert.AreEqual("b", receivedB[1]);
+        Assert.Equal(2, receivedA.Count);
+        Assert.Equal("b", receivedA[1]);
+        Assert.Equal(2, receivedB.Count);
+        Assert.Equal("b", receivedB[1]);
     }
 
-    [TestMethod]
+    [Fact]
     public void OnNext_NoSubscribers_DoesNotThrow()
     {
         var obs = new LinguaObservableString("key", "initial");
         obs.OnNext("updated");
-        Assert.AreEqual("updated", obs.CurrentValue);
+        Assert.Equal("updated", obs.CurrentValue);
     }
 
     // ── Dispose / Unsubscribe ────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void Dispose_StopsReceivingUpdates()
     {
         var obs = new LinguaObservableString("key", "initial");
@@ -150,10 +149,10 @@ public class LinguaObservableStringTests
         subscription.Dispose();
         obs.OnNext("after-dispose");
 
-        Assert.AreEqual(1, received.Count); // only initial value
+        Assert.Single(received); // only initial value
     }
 
-    [TestMethod]
+    [Fact]
     public void Dispose_CalledTwice_DoesNotThrow()
     {
         var obs = new LinguaObservableString("key", "initial");
@@ -163,7 +162,7 @@ public class LinguaObservableStringTests
         subscription.Dispose(); // second dispose must be safe
     }
 
-    [TestMethod]
+    [Fact]
     public void Dispose_OtherSubscribersStillReceiveUpdates()
     {
         var obs = new LinguaObservableString("key", "initial");
@@ -176,14 +175,14 @@ public class LinguaObservableStringTests
         subA.Dispose();
         obs.OnNext("next");
 
-        Assert.AreEqual(1, receivedA.Count); // A only got initial
-        Assert.AreEqual(2, receivedB.Count); // B got initial + next
+        Assert.Single(receivedA); // A only got initial
+        Assert.Equal(2, receivedB.Count); // B got initial + next
     }
 
     // ── Thread safety ────────────────────────────────────────────────────────
 
-    [TestMethod]
-    public void OnNext_ConcurrentSubscribersAndUpdates_DoesNotThrow()
+    [Fact]
+    public async Task OnNext_ConcurrentSubscribersAndUpdates_DoesNotThrow()
     {
         var obs = new LinguaObservableString("key", "0");
 
@@ -192,9 +191,9 @@ public class LinguaObservableStringTests
             var sub = obs.Subscribe(new DelegateObserver<string?>(_ => { }));
             obs.OnNext(i.ToString());
             sub.Dispose();
-        })).ToArray();
+        }));
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
         // no exception = pass
     }
 
