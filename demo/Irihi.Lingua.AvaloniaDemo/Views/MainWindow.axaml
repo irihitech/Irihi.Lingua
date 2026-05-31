@@ -34,6 +34,17 @@
                    FontSize="14" FontStyle="Italic"
                    HorizontalAlignment="Center"
                    ToolTip.Tip="Bound with LocalizeExtension (no ViewModel)" />
+        
+        <NumericUpDown Width="300" Name="page"/>
+        
+        <TextBlock>
+            <TextBlock.Text>
+                <LocalizeFormat FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
+                    <LocalizeItem Binding="{Binding #page.Value}" />
+                    <LocalizeItem Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
+                </LocalizeFormat>
+            </TextBlock.Text>
+        </TextBlock>
 
         <!-- Toggle button — its label is itself an observable string,
              demonstrating that even UI chrome can be driven by the same
