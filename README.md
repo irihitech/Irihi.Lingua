@@ -1,14 +1,23 @@
 # Irihi.Lingua
 
-A C# source generator that turns `.resx` resource files into a strongly-typed, reactive i18n manager.
+[English](README.md) | [中文](README.zh-CN.md)
+
+A C# source generator that turns `.resx` resource files into a strongly-typed, reactive Avalonia i18n manager.
 Each resource key becomes an `IObservable<string?>` property that pushes a new value whenever the active culture changes — no manual `INotifyPropertyChanged` wiring required.
+
+## Highlights
+
+- NativeAOT-compatible.
+- Designed and optimized for Avalonia.
+- Usable from both XAML and ViewModel code.
+- Decentralized i18n managers: define separate resource managers in different classes and choose the granularity that fits your app — per feature, module, screen, or any other boundary you prefer.
 
 ## Installation
 
 Add the NuGet package to your project:
 
 ```xml
-<PackageReference Include="Irihi.Lingua" Version="0.1.0" />
+<PackageReference Include="Irihi.Lingua" />
 ```
 
 The package bundles both the runtime library and the Roslyn source generator. No separate analyzer reference is needed.
@@ -49,11 +58,15 @@ The culture variant files must follow the `<BaseName>.<culture>.resx` naming con
 ### 2. Add the resource files as `AdditionalFiles`
 
 The generator reads all `.resx` files listed as `AdditionalFiles` in your project file.
+You can include them individually or use a wildcard to add every resource file in a folder.
 
 ```xml
 <ItemGroup>
   <AdditionalFiles Include="Resources\Strings.resx" />
   <AdditionalFiles Include="Resources\Strings.zh-Hans.resx" />
+
+  <!-- Or include all .resx files under Resources -->
+  <AdditionalFiles Include="Resources\**\*.resx" />
 </ItemGroup>
 ```
 
@@ -137,48 +150,3 @@ Then use the extension:
 
 The extension resolves the `LinguaKey` from the `Keys` class, looks up the corresponding `IObservable<string?>` and converts it into an Avalonia binding that updates automatically when the culture changes.
 
----
-
-## API Reference
-
-### `LinguaManagerAttribute`
-
-```csharp
-[AttributeUsage(AttributeTargets.Class)]
-public sealed class LinguaManagerAttribute(string resourcePath) : Attribute
-```
-
-Apply to a `partial class` to trigger code generation.
-`resourcePath` is the relative path to the **base** `.resx` file (e.g. `./Resources/Strings.resx`).
-
-### Generated class members
-
-Given a `partial class LanguageManager` decorated with `[LinguaManager]`, the generator emits:
-
-| Member | Description |
-|---|---|
-| `static readonly ILinguaManager Instance` | Singleton accessor. |
-| `IObservable<string?> <Key>` | One property per resource key (e.g. `App_Title`). |
-| `void UpdateCulture(CultureInfo)` | Switches culture and pushes new values to all observers. |
-| `IObservable<string?>? GetObservable(string key)` | Looks up an observable by raw key name. |
-| `static class Keys` | Nested class with a `LinguaKey` constant for every resource key. |
-
-### `ILinguaManager`
-
-```csharp
-public interface ILinguaManager
-{
-    void UpdateCulture(CultureInfo culture);
-    IObservable<string?>? GetObservable(string key);
-}
-```
-
-### `LinguaKey`
-
-A value type that pairs a raw resource key string with its owning `ILinguaManager`.
-Used as the argument to `LocalizeExtension` and implicitly convertible to `string?`.
-
-```csharp
-// Implicit string conversion
-string? title = LanguageManager.Keys.App_Title; // returns current value
-```
