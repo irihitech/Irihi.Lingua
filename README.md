@@ -74,6 +74,7 @@ You can include them individually or use a wildcard to add every resource file i
 
 Apply `[LinguaManager]` to a `partial class`, pointing it at the base `.resx` file.
 The source generator fills in the rest at build time.
+The class name is entirely up to you, and you can define as many `[LinguaManager]` classes in one application as you need — each one is controlled by you.
 
 ```csharp
 [LinguaManager("./Resources/Strings.resx")]
@@ -138,8 +139,10 @@ For direct XAML bindings without a view-model wrapper, use the `Localize` markup
 Add only a `local:` alias for the namespace that contains your `LanguageManager`:
 
 ```xml
-xmlns="https://github.com/avaloniaui"
-xmlns:local="using:YourAppNamespace"
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:local="using:YourAppNamespace">
+  
+</Window>
 ```
 
 Then use the extension:

@@ -74,6 +74,7 @@ Irihi.Lingua 是一个 C# 源生成器，可以将 `.resx` 资源文件转换为
 
 将 `[LinguaManager]` 应用于一个 `partial class`，并指向基础 `.resx` 文件。
 源生成器会在构建时补全剩余代码。
+类名完全由你自己决定，而且在一个应用中定义多少个 `[LinguaManager]` 类都可以——全部由你控制。
 
 ```csharp
 [LinguaManager("./Resources/Strings.resx")]
