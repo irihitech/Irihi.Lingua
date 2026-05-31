@@ -1,0 +1,19 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- ── Package version ─────────────────────────────────────────────────── -->
+    <LinguaVersion>0.2.0</LinguaVersion>
+
+    <!-- ── Shared compiler settings ──────────────────────────────────────── -->
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- ── Shared NuGet author metadata ──────────────────────────────────── -->
+    <Authors>IRIHI Technology Co., Ltd.</Authors>
+    <RepositoryUrl>https://github.com/irihitech/Irihi.Lingua</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+</Project>
+
