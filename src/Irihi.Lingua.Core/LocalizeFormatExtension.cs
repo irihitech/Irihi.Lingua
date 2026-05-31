@@ -1,48 +1,38 @@
 ﻿using Avalonia;
 using Avalonia.Data;
+using Avalonia.Data.Converters;
 using Avalonia.Markup.Xaml;
 using Avalonia.Metadata;
 
 namespace Irihi.Lingua;
 
-public class LocalizeFormatExtension: MarkupExtension
+public class LocalizeFormatExtension : MarkupExtension
 {
     private static readonly LocalizeFormatConverter SharedConverter = new();
+    public IMultiValueConverter? Converter { get; set; }
 
     public LinguaKey? FormatKey { get; set; }
-    
+
     [Content]
+    // ReSharper disable once CollectionNeverUpdated.Global
     public IList<LocalizeItem> Items { get; set; } = new List<LocalizeItem>();
-    
+
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
-        if (FormatKey is null)
-        {
-            return AvaloniaProperty.UnsetValue;
-        }
+        if (FormatKey is null) return AvaloniaProperty.UnsetValue;
 
         var formatObservable = FormatKey.Manager.GetObservable(FormatKey.Key);
-        if (formatObservable is null)
-        {
-            return AvaloniaProperty.UnsetValue;
-        }
+        if (formatObservable is null) return AvaloniaProperty.UnsetValue;
 
-        var bindings = new List<BindingBase>();
-        bindings.Add(formatObservable.ToBinding());
+        var bindings = new List<BindingBase> { formatObservable.ToBinding() };
 
         foreach (var item in Items)
         {
             if (item.Key is not null)
             {
                 var observable = item.Key.Manager.GetObservable(item.Key.Key);
-                if (observable is not null)
-                {
-                    bindings.Add(observable.ToBinding());
-                }
-                else
-                {
-                    bindings.Add(new Binding { Source = null });
-                }
+                if (observable is not null) bindings.Add(observable.ToBinding());
+                else bindings.Add(new Binding { Source = null });
             }
             else if (item.Binding is not null)
             {
@@ -53,10 +43,11 @@ public class LocalizeFormatExtension: MarkupExtension
                 bindings.Add(new Binding { Source = null });
             }
         }
-        return new MultiBinding()
+
+        return new MultiBinding
         {
-            Converter = SharedConverter,
-            Bindings = bindings,
+            Converter = Converter ?? SharedConverter,
+            Bindings = bindings
         };
     }
 }
