@@ -5,6 +5,10 @@
 A C# source generator that turns `.resx` resource files into a strongly-typed, reactive Avalonia i18n manager.
 Each resource key becomes an `IObservable<string?>` property that pushes a new value whenever the active culture changes — no manual `INotifyPropertyChanged` wiring required.
 
+## Special Thanks
+
+Special thanks to [`sylinko/everywhere`](https://github.com/sylinko/everywhere) — this project was inspired by it.
+
 ## Highlights
 
 - NativeAOT-compatible.
