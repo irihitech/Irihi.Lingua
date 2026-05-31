@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Irihi.Lingua.Avalonia.Tests;
 
-public class LocalizeFormatExtensionTests
+public class FormatTranslateExtensionTests
 {
     private static (Window Window, TextBlock Input, TextBlock Page) CreateAndShowWindowForLocalizeFormat()
     {
@@ -100,14 +100,14 @@ public class LocalizeFormatExtensionTests
     [Fact]
     public void LocalizeFormat_ProvideValue_WhenFormatKeyIsNull_Returns_Binding()
     {
-        var extension = new LocalizeFormatExtension();
+        var extension = new FormatTranslateExtension();
         Assert.IsType<MultiBinding>(extension.ProvideValue(null!));
     }
 
     [Fact]
     public void LocalizeFormat_ProvideValue_WhenFormatKeyDoesNotExist_Returns_EmptyBinding()
     {
-        var extension = new LocalizeFormatExtension
+        var extension = new FormatTranslateExtension
         {
             FormatKey = new LinguaKey("NoSuchFormatKey", TestLanguageManager.Instance)
         };
@@ -120,13 +120,13 @@ public class LocalizeFormatExtensionTests
     {
         TestLanguageManager.Instance.Reset();
 
-        var extension = new LocalizeFormatExtension
+        var extension = new FormatTranslateExtension
         {
             FormatKey = TestLanguageManager.Keys.Format_Template,
             Items =
             [
-                new LocalizeItem { Key = TestLanguageManager.Keys.Greeting_Message },
-                new LocalizeItem()
+                new TranslateEntry { Key = TestLanguageManager.Keys.Greeting_Message },
+                new TranslateEntry()
             ]
         };
 

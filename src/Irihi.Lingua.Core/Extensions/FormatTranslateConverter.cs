@@ -4,7 +4,7 @@ using Avalonia.Data.Converters;
 
 namespace Irihi.Lingua.Extensions;
 
-public sealed class LocalizeFormatConverter: IMultiValueConverter
+public sealed class FormatTranslateConverter: IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
