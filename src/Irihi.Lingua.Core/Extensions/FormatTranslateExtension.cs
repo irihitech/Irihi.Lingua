@@ -6,16 +6,16 @@ using Avalonia.Metadata;
 
 namespace Irihi.Lingua.Extensions;
 
-public sealed class LocalizeFormatExtension : MarkupExtension
+public sealed class FormatTranslateExtension : MarkupExtension
 {
-    private static readonly LocalizeFormatConverter SharedConverter = new();
+    private static readonly FormatTranslateConverter SharedConverter = new();
     public IMultiValueConverter? Converter { get; set; }
 
     public LinguaKey? FormatKey { get; set; }
 
     [Content]
     // ReSharper disable once CollectionNeverUpdated.Global
-    public IList<LocalizeItem> Items { get; set; } = new List<LocalizeItem>();
+    public IList<TranslateEntry> Items { get; set; } = new List<TranslateEntry>();
 
     public override object ProvideValue(IServiceProvider serviceProvider)
     {

@@ -2,7 +2,7 @@
 
 namespace Irihi.Lingua.Extensions;
 
-public class LocalizeItem
+public class TranslateEntry
 {
     public LinguaKey? Key { get; set; }
     

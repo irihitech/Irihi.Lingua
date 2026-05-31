@@ -11,7 +11,7 @@ using Xunit;
 namespace Irihi.Lingua.Avalonia.Tests;
 
 /// <summary>
-/// Headless Avalonia tests for <see cref="LocalizeExtension"/>.
+/// Headless Avalonia tests for <see cref="TranslateExtension"/>.
 ///
 /// Each test follows the same MVVM pattern as the demo project:
 /// <list type="number">
@@ -24,7 +24,7 @@ namespace Irihi.Lingua.Avalonia.Tests;
 /// the other uses <c>{Localize {x:Static …}}</c> (LocalizeExtension directly).
 /// Both must reflect the active culture when <see cref="TestLanguageManager.UpdateCulture"/> is called.
 /// </summary>
-public class LocalizeExtensionTests
+public class TranslateExtensionTests
 {
     // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -145,7 +145,7 @@ public class LocalizeExtensionTests
     [AvaloniaFact]
     public void LocalizeExtension_ProvideValue_WhenKeyIsNull_ReturnsUnsetValue()
     {
-        var ext = new LocalizeExtension();   // Key intentionally left null
+        var ext = new TranslateExtension();   // Key intentionally left null
         Assert.Equal(AvaloniaProperty.UnsetValue, ext.ProvideValue(null!));
     }
 
@@ -153,7 +153,7 @@ public class LocalizeExtensionTests
     public void LocalizeExtension_ProvideValue_WhenKeyNotFoundInManager_ReturnsUnsetValue()
     {
         var key = new LinguaKey("NoSuchKey", TestLanguageManager.Instance);
-        var ext = new LocalizeExtension(key);
+        var ext = new TranslateExtension(key);
         Assert.Equal(AvaloniaProperty.UnsetValue, ext.ProvideValue(null!));
     }
 }
