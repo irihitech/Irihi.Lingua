@@ -19,9 +19,8 @@ public class LocalizeFormatExtension : MarkupExtension
 
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
-        if (FormatKey is null) return AvaloniaProperty.UnsetValue;
-
-        var formatObservable = FormatKey.Manager.GetObservable(FormatKey.Key);
+        var formatObservable = FormatKey?.Manager.GetObservable(FormatKey.Key);
+        
         if (formatObservable is null) return AvaloniaProperty.UnsetValue;
 
         var bindings = new List<BindingBase> { formatObservable.ToBinding() };
