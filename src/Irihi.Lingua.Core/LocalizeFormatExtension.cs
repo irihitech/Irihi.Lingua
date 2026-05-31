@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Data;
 using Avalonia.Markup.Xaml;
 using Avalonia.Metadata;
@@ -8,6 +7,8 @@ namespace Irihi.Lingua;
 
 public class LocalizeFormatExtension: MarkupExtension
 {
+    private static readonly LocalizeFormatConverter SharedConverter = new();
+
     public LinguaKey? FormatKey { get; set; }
     
     [Content]
@@ -15,22 +16,46 @@ public class LocalizeFormatExtension: MarkupExtension
     
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
+        if (FormatKey is null)
+        {
+            return AvaloniaProperty.UnsetValue;
+        }
+
+        var formatObservable = FormatKey.Manager.GetObservable(FormatKey.Key);
+        if (formatObservable is null)
+        {
+            return AvaloniaProperty.UnsetValue;
+        }
+
         var bindings = new List<BindingBase>();
-        bindings.Add(FormatKey?.Manager.GetObservable(FormatKey.Key)?.ToBinding());
-        foreach (LocalizeItem item in Items)
+        bindings.Add(formatObservable.ToBinding());
+
+        foreach (var item in Items)
         {
             if (item.Key is not null)
             {
-                 bindings.Add(item.Key.Manager.GetObservable(item.Key.Key)?.ToBinding());
+                var observable = item.Key.Manager.GetObservable(item.Key.Key);
+                if (observable is not null)
+                {
+                    bindings.Add(observable.ToBinding());
+                }
+                else
+                {
+                    bindings.Add(new Binding { Source = null });
+                }
             }
             else if (item.Binding is not null)
             {
                 bindings.Add(item.Binding);
             }
+            else
+            {
+                bindings.Add(new Binding { Source = null });
+            }
         }
         return new MultiBinding()
         {
-            Converter = new LocalizeFormatConverter(),
+            Converter = SharedConverter,
             Bindings = bindings,
         };
     }
