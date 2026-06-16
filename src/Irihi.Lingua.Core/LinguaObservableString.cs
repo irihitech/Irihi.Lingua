@@ -28,7 +28,7 @@ public sealed class LinguaObservableString : IObservable<string?>
     /// <summary>
     /// Gets the most recently emitted value.
     /// </summary>
-    internal string? CurrentValue => Volatile.Read(ref _currentValue);
+    public string? CurrentValue => Volatile.Read(ref _currentValue);
 
     /// <summary>
     /// Initializes a new instance of <see cref="LinguaObservableString"/> with the given key and initial value.
