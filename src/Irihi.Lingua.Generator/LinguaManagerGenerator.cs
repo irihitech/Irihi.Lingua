@@ -24,6 +24,14 @@ namespace Irihi.Lingua.Generator;
 [Generator]
 public sealed class LinguaManagerGenerator : IIncrementalGenerator
 {
+    private static readonly DiagnosticDescriptor ResourcePathNotFoundDescriptor = new(
+        id: "LINGUA001",
+        title: "Resource path not found",
+        messageFormat: "The resource path '{0}' specified in [LinguaManager] does not match any .resx file in the project's AdditionalFiles",
+        category: "Irihi.Lingua",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     private const string AttributeFullName = "Irihi.Lingua.LinguaManagerAttribute";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -81,7 +89,10 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
             _ => "public",
         };
 
-        return new ManagerInfo(classSymbol.Name, ns, resourcePath!, accessibility);
+        // Use the class declaration location so the warning points at the annotated class.
+        var location = ctx.TargetNode.GetLocation();
+
+        return new ManagerInfo(classSymbol.Name, ns, resourcePath!, accessibility, location);
     }
 
     // -------------------------------------------------------------------------
@@ -98,6 +109,8 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         var cultureXml = CollectCultureResources(baseName, resxFiles, spc.CancellationToken);
         if (cultureXml.Count == 0)
         {
+            spc.ReportDiagnostic(Diagnostic.Create(
+                ResourcePathNotFoundDescriptor, info.AttributeLocation, info.ResourcePath));
             return;
         }
 
@@ -525,10 +538,12 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         public string? Namespace { get; }
         public string ResourcePath { get; }
         public string Accessibility { get; }
+        public Location AttributeLocation { get; }
 
-        public ManagerInfo(string className, string? ns, string resourcePath, string accessibility)
+        public ManagerInfo(string className, string? ns, string resourcePath, string accessibility, Location attributeLocation)
         {
             ClassName = className;
+            AttributeLocation = attributeLocation;
             Namespace = ns;
             ResourcePath = resourcePath;
             Accessibility = accessibility;
