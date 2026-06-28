@@ -9,7 +9,7 @@
     <PackageTags>source-generator;i18n;avalonia;resx</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>irihi.png</PackageIcon>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
 
