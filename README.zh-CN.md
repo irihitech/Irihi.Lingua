@@ -2,6 +2,8 @@
 
 [English](README.md) | 中文
 
+[![NuGet](https://img.shields.io/nuget/v/Irihi.Lingua)](https://www.nuget.org/packages/Irihi.Lingua)
+
 Irihi.Lingua 是一个 C# 源生成器，可以将 `.resx` 资源文件转换为强类型、响应式的 Avalonia i18n 管理器。
 每个资源键都会变成一个 `IObservable<string?>` 属性，当当前文化切换时自动推送新值，无需手动编写 `INotifyPropertyChanged`。
 
