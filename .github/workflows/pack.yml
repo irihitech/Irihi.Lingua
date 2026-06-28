@@ -19,7 +19,9 @@ on:
       Irihi_Lingua:
         type: boolean
         default: true
-    secrets: {}
+    secrets:
+      NUGET_ORG_API_KEY:
+        required: false
 
 jobs:
   Pack_to_NuGet:
@@ -31,7 +33,7 @@ jobs:
 
       - name: Pack Irihi.Lingua
         if: ${{ inputs.Irihi_Lingua }}
-        run: dotnet pack src/Irihi.Lingua.Core -o nugets
+        run: dotnet pack src/Irihi.Lingua.Core -c Release -o nugets
 
       - name: Upload to NuGet
         if: ${{ inputs.Upload_to_NuGet }}
