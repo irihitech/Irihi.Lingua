@@ -31,6 +31,29 @@ public sealed class LinguaObservableString : IObservable<string?>
     public string? CurrentValue => Volatile.Read(ref _currentValue);
 
     /// <summary>
+    /// Creates an <see cref="LinguaObservableString"/> from a literal string value,
+    /// without tying it to any resource (.resx) key or <see cref="ILinguaManager"/>.
+    /// </summary>
+    /// <remarks>
+    /// The returned observable immediately emits <paramref name="value"/> to new
+    /// subscribers (behaviour-subject semantics) and never notifies again unless
+    /// <see cref="OnNext"/> is called explicitly.
+    /// This is useful when you need an <see cref="IObservable{String}"/> but the
+    /// source is a hard-coded string rather than a localized resource — for example,
+    /// exposing a constant label alongside localized observables in a ViewModel.
+    /// </remarks>
+    /// <param name="value">
+    /// The string value to wrap.  A <c>null</c> value is allowed and results in an
+    /// observable that emits <c>null</c> to subscribers.
+    /// </param>
+    /// <returns>
+    /// A new <see cref="LinguaObservableString"/> whose <see cref="Key"/> is an
+    /// empty string (since no resource key is involved).
+    /// </returns>
+    public static LinguaObservableString FromLiteral(string? value) =>
+        new(string.Empty, value);
+
+    /// <summary>
     /// Initializes a new instance of <see cref="LinguaObservableString"/> with the given key and initial value.
     /// </summary>
     /// <param name="key">The resource key that this observable represents.</param>
