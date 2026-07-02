@@ -197,6 +197,68 @@ public class LinguaObservableStringTests
         // no exception = pass
     }
 
+    // ── FromLiteral ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void FromLiteral_NonEmptyString_EmitsImmediatelyOnSubscribe()
+    {
+        var obs = LinguaObservableString.FromLiteral("Hello");
+        var received = new List<string?>();
+        obs.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        var single = Assert.Single(received);
+        Assert.Equal("Hello", single);
+    }
+
+    [Fact]
+    public void FromLiteral_NullValue_EmitsNullOnSubscribe()
+    {
+        var obs = LinguaObservableString.FromLiteral(null);
+        var received = new List<string?>();
+        obs.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        Assert.Single(received);
+        Assert.Null(received[0]);
+    }
+
+    [Fact]
+    public void FromLiteral_EmptyString_EmitsEmptyString()
+    {
+        var obs = LinguaObservableString.FromLiteral(string.Empty);
+        var received = new List<string?>();
+        obs.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        var single = Assert.Single(received);
+        Assert.Equal(string.Empty, single);
+    }
+
+    [Fact]
+    public void FromLiteral_KeyIsEmptyString()
+    {
+        var obs = LinguaObservableString.FromLiteral("anything");
+        Assert.Equal(string.Empty, obs.Key);
+    }
+
+    [Fact]
+    public void FromLiteral_CurrentValueReturnsLiteral()
+    {
+        var obs = LinguaObservableString.FromLiteral("literal");
+        Assert.Equal("literal", obs.CurrentValue);
+    }
+
+    [Fact]
+    public void FromLiteral_MultipleSubscribers_AllReceiveSameValue()
+    {
+        var obs = LinguaObservableString.FromLiteral("shared");
+        var countA = 0;
+        var countB = 0;
+        obs.Subscribe(new DelegateObserver<string?>(_ => countA++));
+        obs.Subscribe(new DelegateObserver<string?>(_ => countB++));
+
+        Assert.Equal(1, countA);
+        Assert.Equal(1, countB);
+    }
+
     // ── Helper ───────────────────────────────────────────────────────────────
 
     private sealed class DelegateObserver<T>(Action<T> onNext) : IObserver<T>
