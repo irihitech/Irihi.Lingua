@@ -46,5 +46,6 @@ public partial class MainWindowViewModel : ObservableObject
             _isChinese
                 ? new CultureInfo("zh-Hans")
                 : CultureInfo.InvariantCulture);
+        var currentCulture = LanguageManager.Instance.CurrentCulture;
     }
 }
