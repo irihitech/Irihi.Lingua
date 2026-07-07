@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- ── Package version ─────────────────────────────────────────────────── -->
-    <LinguaVersion>0.4.0</LinguaVersion>
+    <LinguaVersion>0.4.1</LinguaVersion>
 
     <!-- ── Shared compiler settings ──────────────────────────────────────── -->
     <LangVersion>latest</LangVersion>
