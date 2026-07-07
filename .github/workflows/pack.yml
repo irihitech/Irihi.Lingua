@@ -26,7 +26,8 @@ on:
 jobs:
   Pack_to_NuGet:
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
