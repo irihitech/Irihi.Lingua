@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Text;
+using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
@@ -27,7 +28,7 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor ResourcePathNotFoundDescriptor = new(
         id: "LINGUA001",
         title: "Resource path not found",
-        messageFormat: "The resource path '{0}' specified in [LinguaManager] does not match any .resx file in the project's AdditionalFiles",
+        messageFormat: "The resource path '{0}' specified in [LinguaManager] does not match any .resx or .json file in the project's AdditionalFiles",
         category: "Irihi.Lingua",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
@@ -43,12 +44,14 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
                 transform: static (ctx, _) => ExtractManagerInfo(ctx))
             .Where(static info => info != null);
 
-        var allResxFiles = context.AdditionalTextsProvider
-            .Where(static file => file.Path.EndsWith(".resx", StringComparison.OrdinalIgnoreCase))
+        var allResourceFiles = context.AdditionalTextsProvider
+            .Where(static file =>
+                file.Path.EndsWith(".resx", StringComparison.OrdinalIgnoreCase) ||
+                file.Path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             .Collect();
 
         context.RegisterSourceOutput(
-            managedClasses.Combine(allResxFiles),
+            managedClasses.Combine(allResourceFiles),
             static (spc, pair) => Generate(spc, pair.Left!, pair.Right));
     }
 
@@ -96,17 +99,42 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
     }
 
     // -------------------------------------------------------------------------
-    // Generation
+    // Generation — dispatcher
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Dispatches to either RESX or JSON generation based on the file extension
+    /// in <see cref="ManagerInfo.ResourcePath"/>.
+    /// </summary>
     private static void Generate(
         SourceProductionContext spc,
         ManagerInfo info,
-        ImmutableArray<AdditionalText> resxFiles)
+        ImmutableArray<AdditionalText> resourceFiles)
     {
+        if (info.ResourcePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            GenerateFromJson(spc, info, resourceFiles);
+        else
+            GenerateFromResx(spc, info, resourceFiles);
+    }
+
+    // -------------------------------------------------------------------------
+    // Generation — RESX
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Generates source for a <c>.resx</c>-based language manager:
+    /// collects culture-specific <c>.resx</c> files, parses them as XML,
+    /// and produces the generated partial class.
+    /// </summary>
+    private static void GenerateFromResx(
+        SourceProductionContext spc,
+        ManagerInfo info,
+        ImmutableArray<AdditionalText> resourceFiles)
+    {
+        const string extension = ".resx";
         var baseName = Path.GetFileNameWithoutExtension(info.ResourcePath);
 
-        var cultureXml = CollectCultureResources(baseName, resxFiles, spc.CancellationToken);
+        var cultureXml = CollectCultureResources(baseName, resourceFiles, extension, spc.CancellationToken);
         if (cultureXml.Count == 0)
         {
             spc.ReportDiagnostic(Diagnostic.Create(
@@ -114,7 +142,6 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
             return;
         }
 
-        // Determine the key list from the default (or first available) file
         var baseXml = cultureXml.TryGetValue(string.Empty, out var bx) ? bx : cultureXml.Values.First();
         var keys = ParseKeys(baseXml);
         if (keys.Length == 0)
@@ -122,7 +149,6 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
             return;
         }
 
-        // Parse values per culture
         var cultureData = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var kvp in cultureXml)
         {
@@ -133,21 +159,72 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         spc.AddSource($"{info.ClassName}.LinguaManager.g.cs", SourceText.From(source, Encoding.UTF8));
     }
 
+    // -------------------------------------------------------------------------
+    // Generation — JSON
+    // -------------------------------------------------------------------------
+
     /// <summary>
-    /// Scans <paramref name="resxFiles"/> for entries whose file name matches
+    /// Generates source for a <c>.json</c>-based language manager:
+    /// collects culture-specific <c>.json</c> files, flattens nested objects
+    /// into underscore-separated keys, and produces the generated partial class.
+    /// </summary>
+    private static void GenerateFromJson(
+        SourceProductionContext spc,
+        ManagerInfo info,
+        ImmutableArray<AdditionalText> resourceFiles)
+    {
+        const string extension = ".json";
+        var baseName = Path.GetFileNameWithoutExtension(info.ResourcePath);
+
+        var cultureJson = CollectCultureResources(baseName, resourceFiles, extension, spc.CancellationToken);
+        if (cultureJson.Count == 0)
+        {
+            spc.ReportDiagnostic(Diagnostic.Create(
+                ResourcePathNotFoundDescriptor, info.AttributeLocation, info.ResourcePath));
+            return;
+        }
+
+        var baseJson = cultureJson.TryGetValue(string.Empty, out var bj) ? bj : cultureJson.Values.First();
+        var keys = ParseFlattenedJsonKeys(baseJson);
+        if (keys.Length == 0)
+        {
+            return;
+        }
+
+        var cultureData = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in cultureJson)
+        {
+            cultureData[kvp.Key] = ParseFlattenedJsonValues(kvp.Value);
+        }
+
+        var source = BuildSource(info, keys, cultureData);
+        spc.AddSource($"{info.ClassName}.LinguaManager.g.cs", SourceText.From(source, Encoding.UTF8));
+    }
+
+    /// <summary>
+    /// Scans <paramref name="resourceFiles"/> for entries whose file name matches
     /// <paramref name="baseName"/> (default culture, key <c>""</c>) or
-    /// <c>BaseName.Culture.resx</c> (culture variants, key = culture tag).
+    /// <c>BaseName.Culture.ext</c> (culture variants, key = culture tag).
+    /// Only files ending with <paramref name="extension"/> are considered.
     /// </summary>
     private static Dictionary<string, string> CollectCultureResources(
         string baseName,
-        ImmutableArray<AdditionalText> resxFiles,
+        ImmutableArray<AdditionalText> resourceFiles,
+        string extension,
         System.Threading.CancellationToken cancellationToken)
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var file in resxFiles)
+        foreach (var file in resourceFiles)
         {
             var fileName = Path.GetFileName(file.Path);
+
+            // Only consider files with the expected extension
+            if (!fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
 
             string culture;
@@ -158,7 +235,7 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
             }
             else if (nameWithoutExt.StartsWith(baseName + ".", StringComparison.OrdinalIgnoreCase))
             {
-                // Culture variant: BaseName.Culture.resx
+                // Culture variant: BaseName.Culture.ext
                 culture = nameWithoutExt.Substring(baseName.Length + 1);
                 if (string.IsNullOrEmpty(culture))
                 {
@@ -225,6 +302,107 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         }
 
         return result;
+    }
+
+    // -------------------------------------------------------------------------
+    // JSON parsing — flatten nested objects with underscore-separated keys
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Parses a JSON file and extracts all leaf string values, flattening nested
+    /// objects with underscore-separated keys.
+    /// </summary>
+    /// <example>
+    /// <c>{ "a": "A", "b": { "x": "X", "y": "Y" } }</c> → keys <c>a</c>, <c>b_x</c>, <c>b_y</c>.
+    /// </example>
+    private static string[] ParseFlattenedJsonKeys(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var keys = new List<string>();
+            FlattenJsonKeys(doc.RootElement, string.Empty, keys);
+            return keys.Distinct(StringComparer.Ordinal).ToArray();
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Parses a JSON file and returns a flat dictionary of key → value for every
+    /// leaf string in the nested object tree.
+    /// </summary>
+    private static Dictionary<string, string> ParseFlattenedJsonValues(string json)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            FlattenJsonValues(doc.RootElement, string.Empty, result);
+        }
+        catch (JsonException)
+        {
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Recursively walks a JSON element tree, collecting leaf string keys
+    /// with underscore-separated prefixes.
+    /// </summary>
+    private static void FlattenJsonKeys(JsonElement element, string prefix, List<string> keys)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                {
+                    var newPrefix = string.IsNullOrEmpty(prefix)
+                        ? property.Name
+                        : $"{prefix}_{property.Name}";
+                    FlattenJsonKeys(property.Value, newPrefix, keys);
+                }
+                break;
+
+            case JsonValueKind.String:
+                if (!string.IsNullOrEmpty(prefix))
+                    keys.Add(prefix);
+                break;
+
+            // Numbers, booleans, null, arrays are intentionally skipped —
+            // only string leaf values are treated as localizable resources.
+        }
+    }
+
+    /// <summary>
+    /// Recursively walks a JSON element tree, collecting leaf string values
+    /// into a flat dictionary with underscore-separated keys.
+    /// </summary>
+    private static void FlattenJsonValues(JsonElement element, string prefix, Dictionary<string, string> values)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                {
+                    var newPrefix = string.IsNullOrEmpty(prefix)
+                        ? property.Name
+                        : $"{prefix}_{property.Name}";
+                    FlattenJsonValues(property.Value, newPrefix, values);
+                }
+                break;
+
+            case JsonValueKind.String:
+                if (!string.IsNullOrEmpty(prefix))
+                    values[prefix] = element.GetString() ?? string.Empty;
+                break;
+
+            // Numbers, booleans, null, arrays are intentionally skipped —
+            // only string leaf values are treated as localizable resources.
+        }
     }
 
     // -------------------------------------------------------------------------
