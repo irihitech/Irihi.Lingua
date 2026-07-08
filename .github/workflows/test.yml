@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   windows:
@@ -37,4 +38,37 @@ jobs:
             8.0.x
             10.0.x
       - name: Run tests
-        run: dotnet test Irihi.Lingua.slnx --configuration Release
+        run: dotnet test Irihi.Lingua.slnx --configuration Release --results-directory TestResults --logger trx --collect:"XPlat Code Coverage"
+      - name: Combine Coverage Reports
+        uses: danielpalme/ReportGenerator-GitHub-Action@v5
+        with:
+          reports: "TestResults/**/coverage.cobertura.xml"
+          targetdir: "${{ github.workspace }}/CoverageReport"
+          reporttypes: "HtmlInline;Cobertura"
+      - name: Publish Code Coverage Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: "CoverageReport/Cobertura.xml"
+          badge: true
+          fail_below_min: false
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: false
+          indicators: true
+          output: both
+          thresholds: "10 30"
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@v3
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          recreate: true
+          path: code-coverage-results.md
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: |
+            CoverageReport/**
+            TestResults/**/*.trx
+            TestResults/**/coverage.cobertura.xml
+          retention-days: 5
