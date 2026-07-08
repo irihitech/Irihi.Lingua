@@ -4,51 +4,76 @@
         xmlns:local="using:Irihi.Lingua.AvaloniaDemo"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="360"
+        mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="480"
         x:Class="Irihi.Lingua.AvaloniaDemo.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding AppTitle^}"
-        Width="480" Height="360"
+        Width="520" Height="480"
         CanResize="False">
 
     <Design.DataContext>
-        <!-- Design-time DataContext for the IDE previewer. -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <StackPanel Spacing="20" Margin="40"
+    <StackPanel Spacing="16" Margin="40"
                 HorizontalAlignment="Center" VerticalAlignment="Center">
 
-        <!-- Title label — updates reactively when the culture changes -->
-        <TextBlock Text="{Binding AppTitle^}"
-                   FontSize="22" FontWeight="Bold"
-                   HorizontalAlignment="Center" />
+        <!-- ═══ RESX section ═══ -->
+        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+            <StackPanel Spacing="12">
+                <TextBlock Text="RESX Manager" FontSize="14" FontWeight="Bold"
+                           Foreground="DodgerBlue" />
 
-        <!-- Greeting message — also updates reactively -->
-        <TextBlock Text="{Binding GreetingMessage^}"
-                   FontSize="16"
-                   HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding AppTitle^}"
+                           FontSize="18" FontWeight="Bold" />
 
-        <!-- TranslateExtension: directly bind to a LinguaKey without a ViewModel wrapper -->
-        <TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.Greeting_Message}}"
-                   FontSize="14" FontStyle="Italic"
-                   HorizontalAlignment="Center"
-                   ToolTip.Tip="Bound with TranslateExtension (no ViewModel)" />
-        
-        <NumericUpDown Width="300" Name="page"/>
-        
-        <TextBlock>
-            <TextBlock.Text>
-                <FormatTranslate FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
-                    <TranslateEntry Binding="{Binding #page.Value}" />
-                    <TranslateEntry Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
-                </FormatTranslate>
-            </TextBlock.Text>
-        </TextBlock>
+                <TextBlock Text="{Binding GreetingMessage^}"
+                           FontSize="14" />
 
-        <!-- Toggle button — its label is itself an observable string,
-             demonstrating that even UI chrome can be driven by the same
-             IObservable<string> mechanism. -->
+                <TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.Greeting_Message}}"
+                           FontSize="13" FontStyle="Italic"
+                           ToolTip.Tip="Bound with TranslateExtension (no ViewModel)" />
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ JSON section ═══ -->
+        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+            <StackPanel Spacing="12">
+                <TextBlock Text="JSON Manager" FontSize="14" FontWeight="Bold"
+                           Foreground="DarkOrange" />
+                <TextBlock Text="(flattened: app.title → app_title)"
+                           FontSize="11" Foreground="Gray" />
+
+                <TextBlock Text="{Binding JsonAppTitle^}"
+                           FontSize="18" FontWeight="Bold" />
+
+                <TextBlock Text="{Binding JsonGreetingMessage^}"
+                           FontSize="14" />
+
+                <TextBlock Text="{Translate {x:Static local:JsonLanguageManager+Keys.app_greeting}}"
+                           FontSize="13" FontStyle="Italic"
+                           ToolTip.Tip="JSON key bound with TranslateExtension" />
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ FormatTranslate demo ═══ -->
+        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+            <StackPanel Spacing="8">
+                <TextBlock Text="FormatTranslate (RESX)" FontSize="14" FontWeight="Bold"
+                           Foreground="DodgerBlue" />
+                <NumericUpDown Width="200" Name="page" Value="1" />
+                <TextBlock>
+                    <TextBlock.Text>
+                        <FormatTranslate FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
+                            <TranslateEntry Binding="{Binding #page.Value}" />
+                            <TranslateEntry Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
+                        </FormatTranslate>
+                    </TextBlock.Text>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- Toggle button — updates both RESX and JSON managers -->
         <Button Content="{Binding SwitchLanguageLabel^}"
                 Command="{Binding ToggleCultureCommand}"
                 HorizontalAlignment="Center"

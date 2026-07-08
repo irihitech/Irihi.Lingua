@@ -7,6 +7,8 @@
   <ItemGroup>
     <AdditionalFiles Include="Resources\Strings.resx" />
     <AdditionalFiles Include="Resources\Strings.zh-Hans.resx" />
+    <AdditionalFiles Include="Resources\Strings.json" />
+    <AdditionalFiles Include="Resources\Strings.zh-Hans.json" />
     <ProjectReference Include="..\..\src\Irihi.Lingua.Core\Irihi.Lingua.Core.csproj" />
     <ProjectReference Include="..\..\src\Irihi.Lingua.Generator\Irihi.Lingua.Generator.csproj"
                       OutputItemType="Analyzer"

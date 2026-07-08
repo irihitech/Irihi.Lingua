@@ -9,6 +9,8 @@
   <ItemGroup>
     <AdditionalFiles Include="Resources\Strings.resx" />
     <AdditionalFiles Include="Resources\Strings.zh-Hans.resx" />
+    <AdditionalFiles Include="Resources\Strings.json" />
+    <AdditionalFiles Include="Resources\Strings.zh-Hans.json" />
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 

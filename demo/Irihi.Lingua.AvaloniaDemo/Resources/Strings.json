@@ -1,0 +1,6 @@
+{
+  "app": {
+    "title": "Irihi Lingua — Avalonia JSON Demo",
+    "greeting": "Hello from JSON source generator!"
+  }
+}
