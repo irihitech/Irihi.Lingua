@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Run tests
+        run: dotnet test Irihi.Lingua.slnx --configuration Release
+
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Run tests
+        run: dotnet test Irihi.Lingua.slnx --configuration Release
