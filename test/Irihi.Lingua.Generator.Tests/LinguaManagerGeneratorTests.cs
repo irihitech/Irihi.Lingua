@@ -1,28 +1,11 @@
-using System.Collections.Immutable;
-using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Text;
 using Xunit;
 
 namespace Irihi.Lingua.Generator.Tests;
 
-public class LinguaManagerGeneratorTests
+public class LinguaManagerGeneratorTests : LinguaManagerGeneratorTestBase
 {
     // ── Sample resx content ──────────────────────────────────────────────────
-
-    private const string DefaultResxContent = """
-        <?xml version="1.0" encoding="utf-8"?>
-        <root>
-          <data name="App_Title" xml:space="preserve">
-            <value>My Application</value>
-          </data>
-          <data name="Greeting_Message" xml:space="preserve">
-            <value>Hello, World!</value>
-          </data>
-        </root>
-        """;
 
     private const string ZhHansResxContent = """
         <?xml version="1.0" encoding="utf-8"?>
@@ -388,7 +371,7 @@ public class LinguaManagerGeneratorTests
 
         // Filter only errors (ignore warnings)
         var errors = outputCompilation.GetDiagnostics(TestContext.Current.CancellationToken)
-            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Where(d => d.Severity == global::Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
             .ToList();
 
         Assert.Empty(errors);
@@ -480,91 +463,19 @@ public class LinguaManagerGeneratorTests
         Assert.Contains("App_Title", source);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // ── Cross-contamination with JSON ────────────────────────────────────────
 
-    private static GeneratorRunResult RunGenerator(
-        string source,
-        params (string FileName, string Content)[] resxFiles)
+    [Fact]
+    public void Generator_ResxDoesNotPickUpJsonFilesWithSameBaseName()
     {
-        var (driver, _) = RunGeneratorFull(source, resxFiles);
-        var runResult = driver.GetRunResult();
-        return runResult.Results[0];
-    }
+        // When using .resx path, .json files with the same base name must be ignored.
+        const string someJson = """
+            { "greeting": "Hello" }
+            """;
 
-    private static (Compilation Output, ImmutableArray<Diagnostic> Diagnostics)
-        RunGeneratorWithCompilation(
-            string source,
-            params (string FileName, string Content)[] resxFiles)
-    {
-        var (_, pair) = RunGeneratorFull(source, resxFiles);
-        return pair;
-    }
+        var result = RunGenerator(InputSource,
+            ("Strings.json", someJson));
 
-    private static (GeneratorDriver Driver, (Compilation Output, ImmutableArray<Diagnostic> Diagnostics))
-        RunGeneratorFull(
-            string source,
-            params (string FileName, string Content)[] resxFiles)
-    {
-        var compilation = CreateCompilation(source);
-        var additionalTexts = resxFiles
-            .Select(f => (AdditionalText)new InMemoryAdditionalText(
-                Path.Combine("/fake/path", f.FileName),
-                f.Content))
-            .ToImmutableArray();
-
-        var generator = new LinguaManagerGenerator();
-
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            generators: [generator.AsSourceGenerator()],
-            additionalTexts: additionalTexts);
-
-        driver = driver.RunGeneratorsAndUpdateCompilation(
-            compilation, out var outputCompilation, out var diagnostics);
-
-        return (driver, (outputCompilation, diagnostics));
-    }
-
-    private static Compilation CreateCompilation(string source)
-    {
-        var runtimeDir = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
-
-        // Build a minimal but complete set of metadata references so the
-        // generated code (which uses Irihi.Lingua types, CultureInfo, etc.)
-        // compiles cleanly in the test compilation.
-        var references = new List<MetadataReference>
-        {
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-            MetadataReference.CreateFromFile(Path.Combine(runtimeDir, "System.Runtime.dll")),
-            MetadataReference.CreateFromFile(Path.Combine(runtimeDir, "System.Collections.dll")),
-            MetadataReference.CreateFromFile(Path.Combine(runtimeDir, "System.Linq.dll")),
-            MetadataReference.CreateFromFile(Path.Combine(runtimeDir, "System.Globalization.dll")),
-            // Reference the Core project assembly so that LinguaManagerAttribute,
-            // ILinguaManager, LinguaObservableString, and LinguaKey are available.
-            MetadataReference.CreateFromFile(typeof(ILinguaManager).Assembly.Location),
-        };
-
-        return CSharpCompilation.Create(
-            "test_compilation",
-            new[] { CSharpSyntaxTree.ParseText(source) },
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-    }
-
-    // ── InMemoryAdditionalText ────────────────────────────────────────────────
-
-    private sealed class InMemoryAdditionalText : AdditionalText
-    {
-        private readonly string _path;
-        private readonly SourceText _text;
-
-        public InMemoryAdditionalText(string path, string content)
-        {
-            _path = path;
-            _text = SourceText.From(content, Encoding.UTF8);
-        }
-
-        public override string Path => _path;
-
-        public override SourceText GetText(CancellationToken cancellationToken = default) => _text;
+        Assert.Empty(result.GeneratedSources);
     }
 }
