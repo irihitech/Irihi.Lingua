@@ -8,8 +8,9 @@
         x:Class="Irihi.Lingua.AvaloniaDemo.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding AppTitle^}"
+        SizeToContent="WidthAndHeight"
         Width="520" Height="480"
-        CanResize="False">
+        CanResize="True">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
