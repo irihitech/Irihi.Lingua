@@ -67,6 +67,7 @@ public class LinguaKeyTests
 
     private sealed class FakeManager : ILinguaManager
     {
+        public System.Globalization.CultureInfo CurrentCulture => System.Globalization.CultureInfo.InvariantCulture;
         public void UpdateCulture(System.Globalization.CultureInfo culture) { }
         public IObservable<string?>? GetObservable(string key) => null;
         public void AddResources(System.Globalization.CultureInfo culture, IReadOnlyDictionary<string, string> resources) { }

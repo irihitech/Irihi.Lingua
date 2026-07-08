@@ -15,6 +15,13 @@ namespace Irihi.Lingua;
 public interface ILinguaManager
 {
     /// <summary>
+    /// Gets the culture that was last passed to <see cref="UpdateCulture"/>.
+    /// The initial value before <see cref="UpdateCulture"/> is first called
+    /// is <see cref="CultureInfo.InvariantCulture"/>.
+    /// </summary>
+    CultureInfo CurrentCulture { get; }
+
+    /// <summary>
     /// Switches all observable string properties to the resource values for
     /// <paramref name="culture"/>, falling back to the parent culture and then
     /// to the default (invariant) culture if an exact match is not found.

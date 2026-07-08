@@ -261,6 +261,7 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         BuildObservableMembers(sb, keys, defaultValues);
         BuildObservablesField(sb);
         BuildRuntimeResourcesField(sb);
+        BuildCurrentCultureField(sb);
         BuildUpdateCultureMethod(sb);
         BuildGetObservableMethod(sb);
         BuildAddResourcesMethod(sb);
@@ -428,6 +429,16 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
+    /// <summary>Builds the <c>_currentCulture</c> backing field and the <c>CurrentCulture</c> property.</summary>
+    private static void BuildCurrentCultureField(StringBuilder sb)
+    {
+        sb.AppendLine("    private global::System.Globalization.CultureInfo _currentCulture = global::System.Globalization.CultureInfo.InvariantCulture;");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>Gets the culture last passed to <c>UpdateCulture</c>.</summary>");
+        sb.AppendLine("    public global::System.Globalization.CultureInfo CurrentCulture => _currentCulture;");
+        sb.AppendLine();
+    }
+
     /// <summary>Builds the <c>UpdateCulture</c> method that implements <c>ILinguaManager</c>.</summary>
     private static void BuildUpdateCultureMethod(StringBuilder sb)
     {
@@ -442,6 +453,8 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        {");
         sb.AppendLine("            culture = global::System.Globalization.CultureInfo.InvariantCulture;");
         sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        _currentCulture = culture;");
         sb.AppendLine();
         sb.AppendLine("        var _lingua_static_dict = _lingua_resources.Resolve(culture);");
         sb.AppendLine();
