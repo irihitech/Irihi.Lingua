@@ -4,7 +4,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Irihi.Lingua)](https://www.nuget.org/packages/Irihi.Lingua)
 
-A C# source generator that turns `.resx` resource files into a strongly-typed, reactive Avalonia i18n manager.
+A C# source generator that turns `.resx` or `.json` resource files into a strongly-typed, reactive Avalonia i18n manager.
 Each resource key becomes an `IObservable<string?>` property that pushes a new value whenever the active culture changes — no manual `INotifyPropertyChanged` wiring required.
 
 ## Special Thanks
@@ -17,6 +17,7 @@ Special thanks to [`sylinko/everywhere`](https://github.com/sylinko/everywhere) 
 - Designed and optimized for Avalonia.
 - Usable from both XAML and ViewModel code.
 - Decentralized i18n managers: define separate resource managers in different classes and choose the granularity that fits your app — per feature, module, screen, or any other boundary you prefer.
+- Supports both `.resx` (XML) and `.json` resource formats.
 
 ## Installation
 
@@ -116,6 +117,82 @@ LanguageManager.Instance.UpdateCulture(new CultureInfo("zh-Hans"));
 LanguageManager.Instance.UpdateCulture(CultureInfo.InvariantCulture);
 ```
 
+## JSON Source Format
+
+In addition to `.resx`, **`.json` files are also supported**.  
+Just point `[LinguaManager]` at a `.json` file — the file extension tells the generator which format to use.
+
+### Nested object flattening
+
+Nested JSON objects are **flattened into underscore-separated property names**.  
+Only leaf values of type `string` become resource keys — numbers, booleans, and `null` are ignored.
+
+`Resources/Strings.json`:
+```json
+{
+  "a": "Content A",
+  "b": "Content B",
+  "c": {
+    "x": "Content X",
+    "y": "Content Y",
+    "z": {
+      "m": "Content M",
+      "n": "Content N"
+    }
+  }
+}
+```
+
+Generated properties: `a`, `b`, `c_x`, `c_y`, `c_z_m`, `c_z_n`
+
+### Culture variants
+
+Culture-specific JSON files follow the same `<BaseName>.<culture>.json` convention as `.resx`:
+
+```
+Resources/Strings.json              ← default / invariant
+Resources/Strings.zh-Hans.json      ← Simplified Chinese
+```
+
+### Registration
+
+Add JSON files as `AdditionalFiles` alongside your `.resx` files:
+
+```xml
+<ItemGroup>
+  <AdditionalFiles Include="Resources\Strings.json" />
+  <AdditionalFiles Include="Resources\Strings.zh-Hans.json" />
+
+  <!-- Or include all .json files -->
+  <AdditionalFiles Include="Resources\**\*.json" />
+</ItemGroup>
+```
+
+### Manager declaration
+
+Use a separate manager class for JSON resources (or replace your `.resx` manager entirely):
+
+```csharp
+[LinguaManager("./Resources/Strings.json")]
+public partial class JsonLanguageManager;
+```
+
+### Usage
+
+The generated API is identical — `Instance`, `UpdateCulture`, `Keys`, and observable properties work the same way:
+
+```csharp
+// { "app": { "title": "Hello" } } → app_title
+using var sub = JsonLanguageManager.Instance.app_title.Subscribe(
+    t => Console.WriteLine(t));
+
+JsonLanguageManager.Instance.UpdateCulture(new CultureInfo("zh-Hans"));
+```
+
+### Mixing RESX and JSON
+
+You can define as many `[LinguaManager]` classes as you need — one project can use both `.resx` and `.json` managers side by side, each with its own resource files. The generators run independently and produce completely separate output types.
+
 ---
 
 ## Avalonia Usage
@@ -181,4 +258,3 @@ Use `FormatTranslateExtension` (or `FormatTranslate` in XAML) when the resource 
 
 In this example, `{0}` is filled by `#page.Value` and `{1}` is filled by `Greeting_Message`.
 When either the current culture changes or any bound argument value changes, the final text is recomputed automatically.
-

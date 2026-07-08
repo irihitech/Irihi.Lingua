@@ -4,7 +4,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Irihi.Lingua)](https://www.nuget.org/packages/Irihi.Lingua)
 
-Irihi.Lingua 是一个 C# 源生成器，可以将 `.resx` 资源文件转换为强类型、响应式的 Avalonia i18n 管理器。
+Irihi.Lingua 是一个 C# 源生成器，可以将 `.resx` 或 `.json` 资源文件转换为强类型、响应式的 Avalonia i18n 管理器。
 每个资源键都会变成一个 `IObservable<string?>` 属性，当当前文化切换时自动推送新值，无需手动编写 `INotifyPropertyChanged`。
 
 ## 特别致谢
@@ -17,6 +17,7 @@ Irihi.Lingua 是一个 C# 源生成器，可以将 `.resx` 资源文件转换为
 - 为 Avalonia 设计并优化。
 - 可同时在 XAML 和 ViewModel 中使用。
 - 去中心化的 i18n 管理方式：你可以在不同的类中定义独立的资源管理器，并按功能、模块、页面或任意你希望的边界来划分资源粒度。
+- 同时支持 `.resx`（XML）和 `.json` 两种资源格式。
 
 ## 安装
 
@@ -116,6 +117,82 @@ LanguageManager.Instance.UpdateCulture(new CultureInfo("zh-Hans"));
 LanguageManager.Instance.UpdateCulture(CultureInfo.InvariantCulture);
 ```
 
+## JSON 源文件格式
+
+除了 `.resx` 之外，**`.json` 文件也同样支持**。  
+只需将 `[LinguaManager]` 指向一个 `.json` 文件——文件扩展名会自动告诉生成器使用哪种格式。
+
+### 嵌套对象扁平化
+
+嵌套的 JSON 对象会被**扁平化为以下划线分隔的属性名**。  
+只有类型为 `string` 的叶子值才会成为资源键——数字、布尔值和 `null` 会被忽略。
+
+`Resources/Strings.json`：
+```json
+{
+  "a": "Content A",
+  "b": "Content B",
+  "c": {
+    "x": "Content X",
+    "y": "Content Y",
+    "z": {
+      "m": "Content M",
+      "n": "Content N"
+    }
+  }
+}
+```
+
+生成的属性：`a`、`b`、`c_x`、`c_y`、`c_z_m`、`c_z_n`
+
+### 文化变体
+
+文化特定的 JSON 文件遵循与 `.resx` 相同的 `<BaseName>.<culture>.json` 命名约定：
+
+```
+Resources/Strings.json              ← 默认 / 不变文化
+Resources/Strings.zh-Hans.json      ← 简体中文
+```
+
+### 注册
+
+将 JSON 文件作为 `AdditionalFiles` 与 `.resx` 文件一同添加：
+
+```xml
+<ItemGroup>
+  <AdditionalFiles Include="Resources\Strings.json" />
+  <AdditionalFiles Include="Resources\Strings.zh-Hans.json" />
+
+  <!-- 或者包含所有 .json 文件 -->
+  <AdditionalFiles Include="Resources\**\*.json" />
+</ItemGroup>
+```
+
+### 声明管理器
+
+为 JSON 资源单独创建一个管理器类（也可以完全替换掉 `.resx` 管理器）：
+
+```csharp
+[LinguaManager("./Resources/Strings.json")]
+public partial class JsonLanguageManager;
+```
+
+### 使用方式
+
+生成的 API 完全相同——`Instance`、`UpdateCulture`、`Keys` 和可观察属性用法一致：
+
+```csharp
+// { "app": { "title": "Hello" } } → app_title
+using var sub = JsonLanguageManager.Instance.app_title.Subscribe(
+    t => Console.WriteLine(t));
+
+JsonLanguageManager.Instance.UpdateCulture(new CultureInfo("zh-Hans"));
+```
+
+### RESX 与 JSON 混用
+
+你可以定义任意多个 `[LinguaManager]` 类——一个项目可以同时使用 `.resx` 和 `.json` 管理器，各自拥有独立的资源文件。两个生成器独立运行，产生完全分离的输出类型。
+
 ---
 
 ## Avalonia 用法
@@ -179,4 +256,3 @@ xmlns:local="using:YourAppNamespace"
 
 在这个示例中，`{0}` 来自 `#page.Value`，`{1}` 来自 `Greeting_Message`。
 当当前文化变化，或任意参数绑定值变化时，最终文本都会自动重新计算。
-
