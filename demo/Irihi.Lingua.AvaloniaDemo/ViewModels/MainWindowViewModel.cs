@@ -12,6 +12,20 @@ namespace Irihi.Lingua.AvaloniaDemo.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private bool _isChinese;
+    private readonly IDisposable _cultureSub;
+
+    /// <summary>
+    /// Current culture display string, updated via <see cref="ILinguaManager.CultureChanges"/>.
+    /// </summary>
+    [ObservableProperty]
+    private string? _currentCultureDisplay;
+
+    public MainWindowViewModel()
+    {
+        // Subscribe to CultureChanges to update the display label
+        _cultureSub = LanguageManager.Instance.CultureChanges.Subscribe(
+            new DelegateObserver<CultureInfo>(c => CurrentCultureDisplay = c.EnglishName));
+    }
 
     // ── RESX-based observables ───────────────────────────────────────────────
 
@@ -40,6 +54,14 @@ public partial class MainWindowViewModel : ObservableObject
 
         LanguageManager.Instance.UpdateCulture(culture);
         JsonLanguageManager.Instance.UpdateCulture(culture);
-        var currentCulture = LanguageManager.Instance.CurrentCulture;
+    }
+
+    // ── Helper ───────────────────────────────────────────────────────────────
+
+    private sealed class DelegateObserver<T>(Action<T> onNext) : IObserver<T>
+    {
+        public void OnCompleted() { }
+        public void OnError(Exception error) { }
+        public void OnNext(T value) => onNext(value);
     }
 }
