@@ -33,6 +33,22 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor MissingTranslationDescriptor = new(
+        id: "LINGUA002",
+        title: "Resource key missing in culture variant",
+        messageFormat: "Resource key '{0}' is defined in the invariant culture but missing in '{1}'",
+        category: "Irihi.Lingua",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ExtraTranslationDescriptor = new(
+        id: "LINGUA003",
+        title: "Extra resource key in culture variant",
+        messageFormat: "Resource key '{0}' exists in culture '{1}' but has no matching key in the invariant culture — possible typo",
+        category: "Irihi.Lingua",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     private const string AttributeFullName = "Irihi.Lingua.LinguaManagerAttribute";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -155,6 +171,7 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
             cultureData[kvp.Key] = ParseValues(kvp.Value);
         }
 
+        ReportResourceMismatches(spc, info, keys, cultureData);
         var source = BuildSource(info, keys, cultureData);
         spc.AddSource($"{info.ClassName}.LinguaManager.g.cs", SourceText.From(source, Encoding.UTF8));
     }
@@ -197,8 +214,57 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
             cultureData[kvp.Key] = ParseFlattenedJsonValues(kvp.Value);
         }
 
+        ReportResourceMismatches(spc, info, keys, cultureData);
         var source = BuildSource(info, keys, cultureData);
         spc.AddSource($"{info.ClassName}.LinguaManager.g.cs", SourceText.From(source, Encoding.UTF8));
+    }
+
+    /// <summary>
+    /// Compares the invariant culture keys against each culture variant and reports
+    /// <c>LINGUA002</c> when a key is missing from a variant and <c>LINGUA003</c>
+    /// when a variant has an extra key not present in the invariant culture.
+    /// </summary>
+    private static void ReportResourceMismatches(
+        SourceProductionContext spc,
+        ManagerInfo info,
+        string[] keys,
+        Dictionary<string, Dictionary<string, string>> cultureData)
+    {
+        var invariantKeys = new HashSet<string>(keys, StringComparer.Ordinal);
+
+        foreach (var kvp in cultureData)
+        {
+            var cultureName = kvp.Key;
+            var values = kvp.Value;
+            if (string.IsNullOrEmpty(cultureName))
+                continue; // skip invariant / default culture
+
+            var variantKeys = new HashSet<string>(values.Keys, StringComparer.Ordinal);
+
+            // LINGUA002 — keys present in invariant but missing from this variant
+            foreach (var key in invariantKeys)
+            {
+                if (!variantKeys.Contains(key))
+                {
+                    spc.ReportDiagnostic(Diagnostic.Create(
+                        MissingTranslationDescriptor,
+                        info.AttributeLocation,
+                        key, cultureName));
+                }
+            }
+
+            // LINGUA003 — keys present in this variant but not in invariant (likely typos)
+            foreach (var key in variantKeys)
+            {
+                if (!invariantKeys.Contains(key))
+                {
+                    spc.ReportDiagnostic(Diagnostic.Create(
+                        ExtraTranslationDescriptor,
+                        info.AttributeLocation,
+                        key, cultureName));
+                }
+            }
+        }
     }
 
     /// <summary>
