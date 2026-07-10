@@ -440,6 +440,7 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         BuildObservablesField(sb);
         BuildRuntimeResourcesField(sb);
         BuildCurrentCultureField(sb);
+        BuildCultureChangesField(sb);
         BuildUpdateCultureMethod(sb);
         BuildGetObservableMethod(sb);
         BuildAddResourcesMethod(sb);
@@ -617,6 +618,21 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
+    /// <summary>Builds the <c>_cultureChanges</c> backing field and the <c>CultureChanges</c> property.</summary>
+    private static void BuildCultureChangesField(StringBuilder sb)
+    {
+        sb.AppendLine("    private readonly global::Irihi.Lingua.LinguaObservable<global::System.Globalization.CultureInfo> _cultureChanges =");
+        sb.AppendLine("        new global::Irihi.Lingua.LinguaObservable<global::System.Globalization.CultureInfo>(string.Empty, global::System.Globalization.CultureInfo.InvariantCulture);");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Gets an observable that emits the active culture every time <c>UpdateCulture</c> is called.");
+        sb.AppendLine("    /// On subscription the current culture is emitted immediately (behavior-subject semantics).");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public global::System.IObservable<global::System.Globalization.CultureInfo> CultureChanges");
+        sb.AppendLine("        => _cultureChanges;");
+        sb.AppendLine();
+    }
+
     /// <summary>Builds the <c>UpdateCulture</c> method that implements <c>ILinguaManager</c>.</summary>
     private static void BuildUpdateCultureMethod(StringBuilder sb)
     {
@@ -633,6 +649,7 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine();
         sb.AppendLine("        _currentCulture = culture;");
+        sb.AppendLine("        _cultureChanges.OnNext(culture);");
         sb.AppendLine();
         sb.AppendLine("        var _lingua_static_dict = _lingua_resources.Resolve(culture);");
         sb.AppendLine();

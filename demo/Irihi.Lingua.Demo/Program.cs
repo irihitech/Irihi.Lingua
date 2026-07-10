@@ -6,6 +6,10 @@ Console.WriteLine("=== Irihi Lingua Manager Demo ===\n");
 // ── RESX-based manager ──────────────────────────────────────────────────
 Console.WriteLine("── RESX Manager ──");
 
+// Subscribe to culture changes — emits immediately on subscribe
+using var cultureSub = LanguageManager.Instance.CultureChanges.Subscribe(
+    culture => Console.WriteLine($"  [Culture]       : {culture.DisplayName} ({culture.Name})"));
+
 using var titleSub = LanguageManager.Instance.App_Title.Subscribe(
     title => Console.WriteLine($"  App Title      : {title}"));
 
@@ -22,6 +26,9 @@ LanguageManager.Instance.UpdateCulture(CultureInfo.InvariantCulture);
 
 // ── JSON-based manager ──────────────────────────────────────────────────
 Console.WriteLine("\n── JSON Manager ──");
+
+using var jsonCultureSub = JsonLanguageManager.Instance.CultureChanges.Subscribe(
+    culture => Console.WriteLine($"  [Culture]       : {culture.DisplayName} ({culture.Name})"));
 
 // Nested JSON keys are flattened: { "app": { "title": "..." } } → app_title
 using var jsonTitleSub = JsonLanguageManager.Instance.app_title.Subscribe(

@@ -185,6 +185,53 @@ public class LinguaManagerGeneratorTests : LinguaManagerGeneratorTestBase
         Assert.Contains("Hello, World!", source);
     }
 
+    // ── CultureChanges ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Generator_WithDefaultResx_ContainsCultureChangesProperty()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        Assert.Contains(
+            "public global::System.IObservable<global::System.Globalization.CultureInfo> CultureChanges",
+            source);
+    }
+
+    [Fact]
+    public void Generator_WithDefaultResx_ContainsCultureChangesField()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        Assert.Contains(
+            "private readonly global::Irihi.Lingua.LinguaObservable<global::System.Globalization.CultureInfo> _cultureChanges",
+            source);
+    }
+
+    [Fact]
+    public void Generator_WithDefaultResx_UpdateCultureNotifiesCultureChanges()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        Assert.Contains("_cultureChanges.OnNext(culture)", source);
+    }
+
+    [Fact]
+    public void Generator_WithDefaultResx_CultureChangesInitialisedWithInvariantCulture()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        Assert.Contains(
+            "new global::Irihi.Lingua.LinguaObservable<global::System.Globalization.CultureInfo>(string.Empty, global::System.Globalization.CultureInfo.InvariantCulture)",
+            source);
+    }
 
     // ── Multiple cultures ────────────────────────────────────────────────────
 

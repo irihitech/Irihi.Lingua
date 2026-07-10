@@ -31,6 +31,10 @@
                 <TextBlock Text="{Binding GreetingMessage^}"
                            FontSize="14" />
 
+                <!-- Culture tracking via CultureChanges -->
+                <TextBlock Text="{Binding CurrentCultureDisplay}"
+                           FontSize="12" Foreground="Gray" />
+
                 <TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.Greeting_Message}}"
                            FontSize="13" FontStyle="Italic"
                            ToolTip.Tip="Bound with TranslateExtension (no ViewModel)" />

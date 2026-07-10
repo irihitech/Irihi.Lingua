@@ -22,6 +22,18 @@ public interface ILinguaManager
     CultureInfo CurrentCulture { get; }
 
     /// <summary>
+    /// Gets an observable that emits the active <see cref="CultureInfo"/>
+    /// every time <see cref="UpdateCulture"/> is called.
+    /// </summary>
+    /// <remarks>
+    /// On subscription the observable immediately emits the current culture
+    /// (behavior-subject semantics). Subsequent notifications occur whenever
+    /// <see cref="UpdateCulture"/> is called, even when the new culture is
+    /// the same as the previous one.
+    /// </remarks>
+    IObservable<CultureInfo> CultureChanges { get; }
+
+    /// <summary>
     /// Switches all observable string properties to the resource values for
     /// <paramref name="culture"/>, falling back to the parent culture and then
     /// to the default (invariant) culture if an exact match is not found.
