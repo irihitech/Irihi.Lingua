@@ -525,4 +525,69 @@ public class LinguaManagerGeneratorTests : LinguaManagerGeneratorTestBase
 
         Assert.Empty(result.GeneratedSources);
     }
+
+    // ── Resource mismatch diagnostics ─────────────────────────────────────────
+
+    [Fact]
+    public void Generator_MissingKeyInVariant_ReportsLINGUA002()
+    {
+        const string zhHansResx = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <root>
+              <data name="App_Title" xml:space="preserve">
+                <value>我的应用程序</value>
+              </data>
+            </root>
+            """;
+
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent),
+            ("Strings.zh-Hans.resx", zhHansResx));
+
+        var diagnostics = result.Diagnostics;
+        Assert.Contains(diagnostics, d => d.Id == "LINGUA002");
+        var diag = diagnostics.Single(d => d.Id == "LINGUA002");
+        Assert.Contains("Greeting_Message", diag.GetMessage());
+        Assert.Contains("zh-Hans", diag.GetMessage());
+    }
+
+    [Fact]
+    public void Generator_ExtraKeyInVariant_ReportsLINGUA003()
+    {
+        const string zhHansResx = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <root>
+              <data name="App_Title" xml:space="preserve">
+                <value>我的应用程序</value>
+              </data>
+              <data name="Greeting_Message" xml:space="preserve">
+                <value>你好，世界！</value>
+              </data>
+              <data name="Typo_Key" xml:space="preserve">
+                <value>拼写错误</value>
+              </data>
+            </root>
+            """;
+
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent),
+            ("Strings.zh-Hans.resx", zhHansResx));
+
+        var diagnostics = result.Diagnostics;
+        Assert.Contains(diagnostics, d => d.Id == "LINGUA003");
+        var diag = diagnostics.Single(d => d.Id == "LINGUA003");
+        Assert.Contains("Typo_Key", diag.GetMessage());
+        Assert.Contains("zh-Hans", diag.GetMessage());
+    }
+
+    [Fact]
+    public void Generator_AllKeysMatch_NoResourceDiagnostics()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent),
+            ("Strings.zh-Hans.resx", ZhHansResxContent));
+
+        Assert.DoesNotContain(result.Diagnostics, d =>
+            d.Id == "LINGUA002" || d.Id == "LINGUA003");
+    }
 }
