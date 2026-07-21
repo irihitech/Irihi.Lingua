@@ -73,8 +73,16 @@ public sealed class LinguaRuntimeResources
     /// <summary>
     /// Resolves the best-matching resource dictionary for <paramref name="culture"/>
     /// using the same fallback chain as <c>UpdateCulture</c>:
-    /// exact culture → two-letter ISO language → invariant culture.
+    /// exact culture → parent chain → invariant culture.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The fallback walks <see cref="CultureInfo.Parent"/> so that regional
+    /// cultures resolve through their neutral parent.  For example,
+    /// <c>zh-CN</c> → <c>zh-Hans</c> → <c>zh</c> → invariant (on ICU-based
+    /// .NET runtimes), or <c>fr-CA</c> → <c>fr</c> → invariant.
+    /// </para>
+    /// </remarks>
     /// <param name="culture">The target culture.  Must not be <c>null</c>.</param>
     /// <returns>
     /// A snapshot copy of the matched entries, or <c>null</c> when no entry
@@ -89,17 +97,29 @@ public sealed class LinguaRuntimeResources
 
         var store = _store;
 
+        // Step 1: exact match
         if (store.TryGetValue(culture, out var dict))
             return dict;
 
-        if (culture.Name.Length > 0)
+        // Step 2: walk the CultureInfo.Parent chain.
+        // .NET's CultureInfo.Parent chain always terminates at InvariantCulture
+        // (whose Parent == itself).  A for-loop with a generous upper bound
+        // guards against pathological cases so the resolver can never hang.
+        const int maxParentDepth = 10;
+        var current = culture;
+        for (int depth = 0; depth < maxParentDepth; depth++)
         {
-            var twoLetter = culture.TwoLetterISOLanguageName;
-            if (twoLetter != culture.Name &&
-                store.TryGetValue(CultureInfo.GetCultureInfo(twoLetter), out dict))
+            var parent = current.Parent;
+            if (parent == current || parent.Name.Length == 0)
+                break;
+
+            if (store.TryGetValue(parent, out dict))
                 return dict;
+
+            current = parent;
         }
 
+        // Step 3: invariant culture fallback
         return store.TryGetValue(CultureInfo.InvariantCulture, out dict) ? dict : null;
     }
 }
