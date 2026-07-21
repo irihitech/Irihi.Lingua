@@ -76,19 +76,19 @@ public class LinguaRuntimeResourcesTests
     }
 
     [Fact]
-    public void Resolve_FallsBackToTwoLetterLanguageName()
+    public void Resolve_FallsBackToParentCulture()
     {
         var store = new LinguaRuntimeResources();
         store.Add(new CultureInfo("ja"), new Dictionary<string, string> { ["Title"] = "タイトル" });
 
-        // "ja-JP" is not registered, but "ja" is
+        // "ja-JP" is not registered, but its parent "ja" is
         var result = store.Resolve(new CultureInfo("ja-JP"));
         Assert.NotNull(result);
         Assert.Equal("タイトル", result["Title"]);
     }
 
     [Fact]
-    public void Resolve_ExactMatchTakesPriorityOverTwoLetter()
+    public void Resolve_ExactMatchTakesPriorityOverParent()
     {
         var store = new LinguaRuntimeResources();
         store.Add(new CultureInfo("ja"), new Dictionary<string, string> { ["Title"] = "共通" });
@@ -122,6 +122,35 @@ public class LinguaRuntimeResourcesTests
     }
 
     [Fact]
+    public void Resolve_RegionalCultureFallsBackToNeutralParent()
+    {
+        // 核心场景：zh-CN → zh-Hans → zh → invariant
+        var store = new LinguaRuntimeResources();
+        store.Add(new CultureInfo("zh-Hans"), new Dictionary<string, string> { ["Title"] = "简体中文" });
+        store.Add(CultureInfo.InvariantCulture, new Dictionary<string, string> { ["Title"] = "Default" });
+
+        // "zh-CN" should resolve through its parent chain: zh-CN → zh-Hans
+        var result = store.Resolve(new CultureInfo("zh-CN"));
+        Assert.NotNull(result);
+        Assert.Equal("简体中文", result["Title"]);
+    }
+
+    [Fact]
+    public void Resolve_WalksFullParentChain()
+    {
+        // zh-CN → zh-Hans → zh → invariant — stop at first match (zh)
+        var store = new LinguaRuntimeResources();
+        store.Add(new CultureInfo("zh"), new Dictionary<string, string> { ["Title"] = "中文" });
+        store.Add(new CultureInfo("zh-Hans"), new Dictionary<string, string> { ["Title"] = "简体中文" });
+        store.Add(CultureInfo.InvariantCulture, new Dictionary<string, string> { ["Title"] = "Default" });
+
+        // "zh-CN" → first parent match is "zh-Hans" (not "zh")
+        var result = store.Resolve(new CultureInfo("zh-CN"));
+        Assert.NotNull(result);
+        Assert.Equal("简体中文", result["Title"]);
+    }
+
+    [Fact]
     public void Resolve_ReturnsSnapshot_MutatingAfterDoesNotAffectResult()
     {
         var store = new LinguaRuntimeResources();
@@ -134,5 +163,26 @@ public class LinguaRuntimeResourcesTests
 
         // Snapshot must be unaffected
         Assert.Equal("original", snapshot["K"]);
+    }
+
+    // ── Safety: the Parent-chain walk must never loop infinitely ─────────────
+
+    [Fact]
+    public void Resolve_InvariantCulture_DoesNotLoopInfinitely()
+    {
+        // InvariantCulture.Parent == InvariantCulture — must exit immediately.
+        var store = new LinguaRuntimeResources();
+        var result = store.Resolve(CultureInfo.InvariantCulture);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void Resolve_CultureWithNoStoreEntries_DoesNotLoopInfinitely()
+    {
+        // A culture that traces all the way up to invariant (nothing in store)
+        // must complete quickly thanks to the for-loop depth guard.
+        var store = new LinguaRuntimeResources();
+        var result = store.Resolve(new CultureInfo("zh-CN"));
+        Assert.Null(result);
     }
 }
