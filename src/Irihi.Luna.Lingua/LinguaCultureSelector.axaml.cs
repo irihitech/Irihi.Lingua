@@ -103,7 +103,9 @@ public partial class LinguaCultureSelector : UserControl
 
         if (change.Property == SelectedIndexProperty)
         {
-            OnSelectedIndexChanged(change.GetNewValue<int>());
+            var index = change.GetNewValue<int>();
+            OnSelectedIndexChanged(index);
+            SyncSelectedItem(index);
         }
         else if (change.Property == ManagersProperty)
         {
@@ -175,6 +177,15 @@ public partial class LinguaCultureSelector : UserControl
         SyncSelectedIndexFromPrimary();
     }
 
+    private void SyncSelectedItem(int index)
+    {
+        var cultures = Cultures;
+        if (cultures is not null && index >= 0 && index < cultures.Count)
+            SetCurrentValue(SelectedItemProperty, cultures[index]);
+        else
+            SetCurrentValue(SelectedItemProperty, null);
+    }
+
     private void SyncSelectedIndexFromPrimary()
     {
         var managers = Managers;
@@ -184,7 +195,6 @@ public partial class LinguaCultureSelector : UserControl
         if (primary is null || cultures is null || cultures.Count == 0)
         {
             SetCurrentValue(SelectedIndexProperty, -1);
-            SetCurrentValue(SelectedItemProperty, null);
             return;
         }
 
@@ -194,13 +204,11 @@ public partial class LinguaCultureSelector : UserControl
             if (cultures[i].Culture.Name == current.Name)
             {
                 SetCurrentValue(SelectedIndexProperty, i);
-                SetCurrentValue(SelectedItemProperty, cultures[i]);
                 return;
             }
         }
 
         SetCurrentValue(SelectedIndexProperty, -1);
-        SetCurrentValue(SelectedItemProperty, null);
     }
 
     private static void WireCollectionChanged<T>(
