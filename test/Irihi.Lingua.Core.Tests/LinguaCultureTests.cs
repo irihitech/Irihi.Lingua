@@ -36,7 +36,7 @@ public class LinguaCultureTests
     }
 
     [Fact]
-    public void DisplayText_UsesShortDisplayNameFirst()
+    public void SelectionDisplayText_UsesShortDisplayNameFirst()
     {
         var lc = new LinguaCulture
         {
@@ -44,21 +44,26 @@ public class LinguaCultureTests
             DisplayName = "Chinese (Simplified)",
             ShortDisplayName = "中文"
         };
-        Assert.Equal("中文", lc.DisplayText);
+        Assert.Equal("中文", lc.SelectionDisplayText);
     }
 
     [Fact]
-    public void DisplayText_FallsBackToDisplayName()
+    public void DisplayText_IgnoresShortDisplayName()
+    {
+        var lc = new LinguaCulture
+        {
+            Culture = new CultureInfo("zh-Hans"),
+            DisplayName = "Chinese (Simplified)",
+            ShortDisplayName = "中文"
+        };
+        Assert.Equal("Chinese (Simplified)", lc.DisplayText);
+    }
+
+    [Fact]
+    public void SelectionDisplayText_FallsBackToDisplayText()
     {
         var lc = new LinguaCulture { Culture = new CultureInfo("en"), DisplayName = "English" };
-        Assert.Equal("English", lc.DisplayText);
-    }
-
-    [Fact]
-    public void DisplayText_FallsBackToNativeName()
-    {
-        var lc = new LinguaCulture { Culture = new CultureInfo("zh-Hans") };
-        Assert.Equal(new CultureInfo("zh-Hans").NativeName, lc.DisplayText);
+        Assert.Equal("English", lc.SelectionDisplayText);
     }
 
     [Fact]

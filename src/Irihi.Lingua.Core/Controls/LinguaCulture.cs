@@ -58,21 +58,24 @@ public class LinguaCulture
     public string? DisplayName { get; set; }
 
     /// <summary>
-    /// Gets or sets an optional shorter display name used when the selector
-    /// shows the currently selected item.
-    /// Falls back to <see cref="DisplayName"/> then <see cref="CultureInfo.NativeName"/>.
+    /// Gets or sets an optional shorter name shown in the selection box.
+    /// When set, the ComboBox selection box uses this compact name while
+    /// the dropdown list still shows the full <see cref="DisplayText"/>.
     /// </summary>
-    /// <example>
-    /// DisplayName = "Chinese (Simplified)", ShortDisplayName = "中文"
-    /// </example>
+    /// <example>DisplayName="Chinese (Simplified)", ShortDisplayName="中文"</example>
     public string? ShortDisplayName { get; set; }
 
     /// <summary>
-    /// Gets the text to display in the selector UI —
-    /// <see cref="ShortDisplayName"/> if set, else <see cref="DisplayName"/>,
-    /// else <see cref="CultureInfo.NativeName"/>.
+    /// Gets the text shown in the dropdown list —
+    /// <see cref="DisplayName"/> if set, else <see cref="CultureInfo.NativeName"/>.
     /// </summary>
-    public string DisplayText => ShortDisplayName ?? DisplayName ?? Culture.NativeName;
+    public string DisplayText => DisplayName ?? Culture.NativeName;
+
+    /// <summary>
+    /// Gets the compact text shown in the selection box —
+    /// <see cref="ShortDisplayName"/> if set, else <see cref="DisplayText"/>.
+    /// </summary>
+    public string SelectionDisplayText => ShortDisplayName ?? DisplayText;
 }
 
 /// <summary>

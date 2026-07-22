@@ -43,14 +43,14 @@
                 <TextBlock Text="Cultures defined inline with TypeConverter. Managers still bound (singletons)."
                            FontSize="11" Foreground="Gray" />
 
-                <lingua:CulturePicker>
+                <lingua:CulturePicker HorizontalAlignment="Left">
                     <lingua:CulturePicker.Managers>
                         <x:Static Member="local:LanguageManager.Instance" />
                         <x:Static Member="local:JsonLanguageManager.Instance" />
                     </lingua:CulturePicker.Managers>
                     <lingua:CulturePicker.Cultures>
                         <x:Static Member="lingua:LinguaCulture.InvariantCulture" />
-                        <lingua:LinguaCulture DisplayName="简体中文" Culture="zh-Hans" />
+                        <lingua:LinguaCulture DisplayName="简体中文" Culture="zh-Hans" ShortDisplayName="中" />
                         <lingua:LinguaCulture>ja-JP</lingua:LinguaCulture>
                     </lingua:CulturePicker.Cultures>
                 </lingua:CulturePicker>

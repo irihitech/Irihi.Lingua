@@ -17,7 +17,7 @@
                                     <PathIcon Width="16" Height="16"
                                               Margin="0 0 4 0"
                                               Data="{StaticResource SemiIconLanguage}" />
-                                    <TextBlock Text="{Binding DisplayText}"
+                                    <TextBlock Text="{Binding SelectionDisplayText}"
                                                VerticalAlignment="Center" />
                                 </StackPanel>
                             </DataTemplate>
