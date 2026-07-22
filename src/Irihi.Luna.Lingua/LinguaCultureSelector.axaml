@@ -1,14 +1,21 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:lingua="using:Irihi.Luna.Lingua"
              x:Class="Irihi.Luna.Lingua.LinguaCultureSelector"
              x:Name="Root">
 
-    <UserControl.Resources>
-        <MenuFlyout x:Key="CultureMenuFlyout" />
-    </UserControl.Resources>
-
-    <Button x:Name="CultureButton"
-            Content="Select culture"
-            HorizontalAlignment="Stretch"
-            Flyout="{StaticResource CultureMenuFlyout}" />
+    <DropDownButton x:Name="CultureButton"
+                    Content="Select culture"
+                    HorizontalAlignment="Stretch">
+        <DropDownButton.Flyout>
+            <MenuFlyout ItemsSource="{Binding #Root.Cultures}"
+                        Opened="OnMenuFlyoutOpened">
+                <MenuFlyout.ItemTemplate>
+                    <DataTemplate x:DataType="lingua:LinguaCulture">
+                        <TextBlock Text="{Binding DisplayText}" />
+                    </DataTemplate>
+                </MenuFlyout.ItemTemplate>
+            </MenuFlyout>
+        </DropDownButton.Flyout>
+    </DropDownButton>
 </UserControl>
