@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="using:System.Globalization"
+             x:Class="Irihi.Luna.Lingua.LinguaCultureSelector"
+             x:Name="Root">
+    <ComboBox x:Name="CultureComboBox"
+              ItemsSource="{Binding AvailableCultures, ElementName=Root}"
+              SelectedIndex="{Binding SelectedIndex, ElementName=Root}">
+        <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="sys:CultureInfo">
+                <TextBlock Text="{Binding NativeName}" />
+            </DataTemplate>
+        </ComboBox.ItemTemplate>
+    </ComboBox>
+</UserControl>
