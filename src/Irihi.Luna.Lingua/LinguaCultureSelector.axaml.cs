@@ -29,7 +29,7 @@ public partial class LinguaCultureSelector : UserControl
     public static readonly StyledProperty<ICommand?> SelectionCommandProperty =
         AvaloniaProperty.Register<LinguaCultureSelector, ICommand?>(nameof(SelectionCommand));
 
-    public ICommand? SelectionCommand
+    internal ICommand? SelectionCommand
     {
         get => GetValue(SelectionCommandProperty);
         set => SetValue(SelectionCommandProperty, value);
