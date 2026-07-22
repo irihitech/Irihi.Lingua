@@ -1,6 +1,6 @@
-using System;
 using System.ComponentModel;
 using System.Globalization;
+using Avalonia.Metadata;
 
 namespace Irihi.Luna.Lingua;
 
@@ -10,8 +10,8 @@ namespace Irihi.Luna.Lingua;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This type has a <see cref="TypeConverter"/> so that XAML inline values
-/// can be written as plain culture names:
+/// The <see cref="CultureName"/> property is marked <see cref="ContentAttribute"/>
+/// so that XAML inline text is treated as a culture identifier:
 /// <code>&lt;luna:LinguaCulture&gt;zh-Hans&lt;/luna:LinguaCulture&gt;</code>
 /// </para>
 /// <para>
@@ -22,6 +22,21 @@ namespace Irihi.Luna.Lingua;
 [TypeConverter(typeof(LinguaCultureTypeConverter))]
 public class LinguaCulture
 {
+    /// <summary>
+    /// Gets or sets the culture identifier string.
+    /// This is the <see cref="ContentAttribute">Content</see> property — XAML
+    /// inner text such as <c>&lt;LinguaCulture&gt;en&lt;/LinguaCulture&gt;</c>
+    /// maps here and is parsed into <see cref="Culture"/>.
+    /// </summary>
+    [Content]
+    public string CultureName
+    {
+        get => Culture.Name;
+        set => Culture = string.IsNullOrEmpty(value)
+            ? CultureInfo.InvariantCulture
+            : new CultureInfo(value);
+    }
+
     /// <summary>
     /// Gets or sets the <see cref="CultureInfo"/> for this entry.
     /// </summary>
@@ -55,7 +70,7 @@ public class LinguaCultureTypeConverter : TypeConverter
     public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
     {
         if (value is string s)
-            return new LinguaCulture { Culture = new CultureInfo(s) };
+            return new LinguaCulture { CultureName = s };
 
         return base.ConvertFrom(context, culture, value);
     }
