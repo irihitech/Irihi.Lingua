@@ -103,11 +103,9 @@ public partial class LinguaCultureSelector : UserControl
         WireCollectionChanged(defaultManagers, ref _observedManagers, OnManagersCollectionChanged);
         WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
 
-        _cultureMenuFlyout = new MenuFlyout();
-        CultureButton.Flyout = _cultureMenuFlyout;
-
         InitializeComponent();
 
+        _cultureMenuFlyout = (MenuFlyout)Resources["CultureMenuFlyout"]!;
         CultureButton.Content = _defaultButtonContent;
     }
 
