@@ -35,6 +35,7 @@
         </DropDownButton.Styles>
         <DropDownButton.Flyout>
             <MenuFlyout
+                Placement="BottomEdgeAlignedRight"
                 ItemsSource="{Binding #Root.Cultures}">
                 <MenuFlyout.ItemTemplate>
                     <DataTemplate
