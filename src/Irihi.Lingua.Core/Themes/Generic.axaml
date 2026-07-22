@@ -8,7 +8,8 @@
         <ControlTheme x:Key="{x:Type lingua:CulturePicker}" TargetType="lingua:CulturePicker">
             <Setter Property="Template">
                 <ControlTemplate>
-                    <DropDownButton Content="{Binding SelectedItem, RelativeSource={RelativeSource TemplatedParent}}"
+                    <DropDownButton x:Name="PART_DropDownButton"
+                                    Content="{Binding SelectedItem, RelativeSource={RelativeSource TemplatedParent}}"
                                     HorizontalAlignment="Stretch">
                         <DropDownButton.ContentTemplate>
                             <DataTemplate x:DataType="lingua:LinguaCulture">
@@ -21,12 +22,6 @@
                                 </StackPanel>
                             </DataTemplate>
                         </DropDownButton.ContentTemplate>
-                        <DropDownButton.Styles>
-                            <Style Selector="MenuItem" x:DataType="lingua:LinguaCulture">
-                                <Setter Property="Command" Value="{Binding SelectionCommand, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=lingua:CulturePicker}}" />
-                                <Setter Property="CommandParameter" Value="{Binding .}" />
-                            </Style>
-                        </DropDownButton.Styles>
                         <DropDownButton.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedRight"
                                         ItemsSource="{Binding Cultures, RelativeSource={RelativeSource TemplatedParent}}">

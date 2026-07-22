@@ -5,7 +5,9 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Windows.Input;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Interactivity;
 using Irihi.Avalonia.Shared.Common;
 using Irihi.Lingua;
 
@@ -83,6 +85,28 @@ public class CulturePicker : TemplatedControl
         WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
 
         SetCurrentValue(SelectionCommandProperty, new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected));
+    }
+
+    protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
+    {
+        base.OnApplyTemplate(e);
+
+        if (e.NameScope.Find<DropDownButton>("PART_DropDownButton") is { Flyout: MenuFlyout flyout })
+        {
+            flyout.Opening += OnFlyoutOpening;
+        }
+    }
+
+    private void OnFlyoutOpening(object? sender, EventArgs e)
+    {
+        if (sender is not MenuFlyout flyout) return;
+
+        foreach (MenuItem? item in flyout.Items)
+        {
+            if (item is null) continue;
+            item.Command = SelectionCommand;
+            item.CommandParameter = item.DataContext;
+        }
     }
 
     private void OnCultureSelected(LinguaCulture? culture)
