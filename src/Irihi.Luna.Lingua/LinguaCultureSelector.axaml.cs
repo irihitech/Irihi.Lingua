@@ -5,13 +5,14 @@ using System.Collections.Specialized;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Irihi.Lingua;
 
 namespace Irihi.Luna.Lingua;
 
 /// <summary>
-/// A user control that provides culture selection UI, driving one or more
-/// <see cref="ILinguaManager"/> instances.
+/// A user control that provides culture selection UI via a dropdown button,
+/// driving one or more <see cref="ILinguaManager"/> instances.
 /// </summary>
 /// <remarks>
 /// The first manager in <see cref="Managers"/> is treated as the <em>primary</em>
@@ -68,8 +69,6 @@ public partial class LinguaCultureSelector : UserControl
 
     /// <summary>
     /// Gets or sets the list of cultures available for selection.
-    /// Each <see cref="LinguaCulture"/> wraps a <see cref="CultureInfo"/>
-    /// with an optional custom <see cref="LinguaCulture.DisplayName"/>.
     /// </summary>
     public IList<LinguaCulture>? Cultures
     {
@@ -86,10 +85,12 @@ public partial class LinguaCultureSelector : UserControl
         set => SetValue(SelectedIndexProperty, value);
     }
 
+    private readonly MenuFlyout _cultureMenuFlyout;
     private IDisposable? _primaryCultureSubscription;
     private INotifyCollectionChanged? _observedManagers;
     private INotifyCollectionChanged? _observedCultures;
     private bool _suppressSync;
+    private string _defaultButtonContent = "Select culture";
 
     public LinguaCultureSelector()
     {
@@ -102,7 +103,12 @@ public partial class LinguaCultureSelector : UserControl
         WireCollectionChanged(defaultManagers, ref _observedManagers, OnManagersCollectionChanged);
         WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
 
+        _cultureMenuFlyout = new MenuFlyout();
+        CultureButton.Flyout = _cultureMenuFlyout;
+
         InitializeComponent();
+
+        CultureButton.Content = _defaultButtonContent;
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -125,7 +131,7 @@ public partial class LinguaCultureSelector : UserControl
             var newList = change.GetNewValue<IList<LinguaCulture>?>();
             if (!ReferenceEquals(change.GetOldValue<IList<LinguaCulture>?>(), newList))
                 WireCollectionChanged(newList, ref _observedCultures, OnCulturesCollectionChanged);
-            SyncSelectedIndexFromPrimary();
+            RebuildMenu();
         }
     }
 
@@ -175,14 +181,96 @@ public partial class LinguaCultureSelector : UserControl
 
     private void OnManagersCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Primary manager may have been added/removed — rewire.
         OnManagersChanged();
     }
 
     private void OnCulturesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Cultures were added/removed inline — re-sync selection.
+        RebuildMenu();
+    }
+
+    private void RebuildMenu()
+    {
+        var cultures = Cultures;
+        var menu = _cultureMenuFlyout;
+
+        // Unhook old item clicks before clearing.
+        foreach (MenuItem? item in menu.Items)
+        {
+            if (item is not null)
+                item.Click -= OnMenuItemClick;
+        }
+
+        menu.Items.Clear();
+
+        if (cultures is null || cultures.Count == 0)
+        {
+            CultureButton.Content = _defaultButtonContent;
+            return;
+        }
+
+        for (int i = 0; i < cultures.Count; i++)
+        {
+            var culture = cultures[i];
+            var menuItem = new MenuItem
+            {
+                Header = culture.DisplayText,
+                Tag = i
+            };
+            menuItem.Click += OnMenuItemClick;
+            menu.Items.Add(menuItem);
+        }
+
         SyncSelectedIndexFromPrimary();
+    }
+
+    private void OnMenuItemClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem && menuItem.Tag is int index)
+        {
+            SelectedIndex = index;
+        }
+    }
+
+    private void SyncSelectedIndexFromPrimary()
+    {
+        var managers = Managers;
+        var cultures = Cultures;
+
+        var primary = managers is not null && managers.Count > 0 ? managers[0] : null;
+        if (primary is null || cultures is null || cultures.Count == 0)
+        {
+            SetCurrentValue(SelectedIndexProperty, -1);
+            CultureButton.Content = _defaultButtonContent;
+            return;
+        }
+
+        var current = primary.CurrentCulture;
+        for (int i = 0; i < cultures.Count; i++)
+        {
+            if (cultures[i].Culture.Name == current.Name)
+            {
+                SetCurrentValue(SelectedIndexProperty, i);
+                CultureButton.Content = cultures[i].DisplayText;
+                UpdateMenuCheck(i);
+                return;
+            }
+        }
+
+        SetCurrentValue(SelectedIndexProperty, -1);
+        CultureButton.Content = _defaultButtonContent;
+    }
+
+    private void UpdateMenuCheck(int selectedIndex)
+    {
+        var items = _cultureMenuFlyout.Items;
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] is MenuItem mi)
+            {
+                mi.IsChecked = i == selectedIndex;
+            }
+        }
     }
 
     private static void WireCollectionChanged<T>(
@@ -200,31 +288,6 @@ public partial class LinguaCultureSelector : UserControl
 
         if (field is not null)
             field.CollectionChanged += handler;
-    }
-
-    private void SyncSelectedIndexFromPrimary()
-    {
-        var managers = Managers;
-        var cultures = Cultures;
-
-        var primary = managers is not null && managers.Count > 0 ? managers[0] : null;
-        if (primary is null || cultures is null || cultures.Count == 0)
-        {
-            SelectedIndex = -1;
-            return;
-        }
-
-        var current = primary.CurrentCulture;
-        for (int i = 0; i < cultures.Count; i++)
-        {
-            if (cultures[i].Culture.Name == current.Name)
-            {
-                SelectedIndex = i;
-                return;
-            }
-        }
-
-        SelectedIndex = -1;
     }
 
     private sealed class CultureChangeObserver : IObserver<CultureInfo>
