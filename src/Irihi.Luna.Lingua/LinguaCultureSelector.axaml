@@ -5,8 +5,13 @@
              x:Name="Root">
 
     <DropDownButton x:Name="CultureButton"
-                    Content="Select culture"
+                    Content="{Binding #Root.SelectedItem}"
                     HorizontalAlignment="Stretch">
+        <DropDownButton.ContentTemplate>
+            <DataTemplate x:DataType="lingua:LinguaCulture">
+                <TextBlock Text="{Binding DisplayText}" />
+            </DataTemplate>
+        </DropDownButton.ContentTemplate>
         <DropDownButton.Styles>
             <Style Selector="MenuItem" x:DataType="lingua:LinguaCulture">
                 <Setter Property="Command" Value="{Binding #Root.SelectionCommand}" />

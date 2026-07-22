@@ -26,6 +26,9 @@ public partial class LinguaCultureSelector : UserControl
     public static readonly StyledProperty<int> SelectedIndexProperty =
         AvaloniaProperty.Register<LinguaCultureSelector, int>(nameof(SelectedIndex), defaultValue: -1);
 
+    public static readonly StyledProperty<LinguaCulture?> SelectedItemProperty =
+        AvaloniaProperty.Register<LinguaCultureSelector, LinguaCulture?>(nameof(SelectedItem));
+
     /// <summary>
     /// Command executed when a culture is selected from the dropdown.
     /// Bound from the XAML MenuItem style.
@@ -50,11 +53,16 @@ public partial class LinguaCultureSelector : UserControl
         set => SetValue(SelectedIndexProperty, value);
     }
 
+    internal LinguaCulture? SelectedItem
+    {
+        get => GetValue(SelectedItemProperty);
+        set => SetValue(SelectedItemProperty, value);
+    }
+
     private IDisposable? _primaryCultureSubscription;
     private INotifyCollectionChanged? _observedManagers;
     private INotifyCollectionChanged? _observedCultures;
     private bool _suppressSync;
-    private string _defaultButtonContent = "Select culture";
 
     public LinguaCultureSelector()
     {
@@ -70,8 +78,6 @@ public partial class LinguaCultureSelector : UserControl
         SelectionCommand = new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected);
 
         InitializeComponent();
-
-        CultureButton.Content = _defaultButtonContent;
     }
 
     private void OnCultureSelected(LinguaCulture? culture)
@@ -178,7 +184,7 @@ public partial class LinguaCultureSelector : UserControl
         if (primary is null || cultures is null || cultures.Count == 0)
         {
             SetCurrentValue(SelectedIndexProperty, -1);
-            CultureButton.Content = _defaultButtonContent;
+            SetCurrentValue(SelectedItemProperty, null);
             return;
         }
 
@@ -188,13 +194,13 @@ public partial class LinguaCultureSelector : UserControl
             if (cultures[i].Culture.Name == current.Name)
             {
                 SetCurrentValue(SelectedIndexProperty, i);
-                CultureButton.Content = cultures[i].DisplayText;
+                SetCurrentValue(SelectedItemProperty, cultures[i]);
                 return;
             }
         }
 
         SetCurrentValue(SelectedIndexProperty, -1);
-        CultureButton.Content = _defaultButtonContent;
+        SetCurrentValue(SelectedItemProperty, null);
     }
 
     private static void WireCollectionChanged<T>(
