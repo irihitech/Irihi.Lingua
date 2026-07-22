@@ -5,8 +5,8 @@
     <!-- NuGet package metadata -->
     <PackageId>Irihi.Lingua</PackageId>
     <Version>$(LinguaVersion)</Version>
-    <Description>Source generator package for generating i18n facilities for Avalonia projects from .resx files.</Description>
-    <PackageTags>source-generator;i18n;avalonia;resx</PackageTags>
+    <Description>i18n source generator and culture-switching controls for Avalonia projects.</Description>
+    <PackageTags>source-generator;i18n;avalonia;resx;controls;localization;culture-switch</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>irihi.png</PackageIcon>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>

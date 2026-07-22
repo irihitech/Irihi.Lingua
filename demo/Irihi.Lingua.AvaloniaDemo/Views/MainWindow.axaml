@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Irihi.Lingua.AvaloniaDemo.ViewModels"
         xmlns:local="using:Irihi.Lingua.AvaloniaDemo"
+        xmlns:lingua="https://irihi.tech/lingua"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="480"
@@ -16,8 +17,45 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
+
     <StackPanel Spacing="16" Margin="40"
                 HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border BorderBrush="ForestGreen" BorderThickness="1" CornerRadius="4" Padding="12">
+            <StackPanel Spacing="8">
+                <TextBlock Text="LinguaCultureSelector — Binding" FontSize="14" FontWeight="Bold"
+                           Foreground="ForestGreen" />
+                <TextBlock Text="Managers &amp; Cultures come from ViewModel."
+                           FontSize="11" Foreground="Gray" />
+
+                <lingua:CulturePicker
+                    Managers="{Binding Managers}"
+                    Cultures="{Binding Cultures}" />
+
+                <TextBlock Text="{Binding CurrentCultureDisplay}"
+                           FontSize="12" Foreground="Gray" />
+            </StackPanel>
+        </Border>
+        
+        <Border BorderBrush="Teal" BorderThickness="1" CornerRadius="4" Padding="12">
+            <StackPanel Spacing="8">
+                <TextBlock Text="LinguaCultureSelector — Inline XAML" FontSize="14" FontWeight="Bold"
+                           Foreground="Teal" />
+                <TextBlock Text="Cultures defined inline with TypeConverter. Managers still bound (singletons)."
+                           FontSize="11" Foreground="Gray" />
+
+                <lingua:CulturePicker HorizontalAlignment="Left">
+                    <lingua:CulturePicker.Managers>
+                        <x:Static Member="local:LanguageManager.Instance" />
+                        <x:Static Member="local:JsonLanguageManager.Instance" />
+                    </lingua:CulturePicker.Managers>
+                    <lingua:CulturePicker.Cultures>
+                        <x:Static Member="lingua:LinguaCulture.InvariantCulture" />
+                        <lingua:LinguaCulture DisplayName="简体中文" Culture="zh-Hans" ShortDisplayName="中" />
+                        <lingua:LinguaCulture>ja-JP</lingua:LinguaCulture>
+                    </lingua:CulturePicker.Cultures>
+                </lingua:CulturePicker>
+            </StackPanel>
+        </Border>
 
         <!-- ═══ RESX section ═══ -->
         <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">

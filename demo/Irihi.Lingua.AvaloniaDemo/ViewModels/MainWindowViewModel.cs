@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Irihi.Lingua;
 
 namespace Irihi.Lingua.AvaloniaDemo.ViewModels;
 
@@ -26,6 +28,27 @@ public partial class MainWindowViewModel : ObservableObject
         _cultureSub = LanguageManager.Instance.CultureChanges.Subscribe(
             new DelegateObserver<CultureInfo>(c => CurrentCultureDisplay = c.EnglishName));
     }
+
+    // ── CulturePicker support ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Manager collection for <see cref="CulturePicker"/>.
+    /// Both RESX and JSON managers follow the selected culture.
+    /// </summary>
+    public IList<ILinguaManager> Managers { get; } = new List<ILinguaManager>
+    {
+        LanguageManager.Instance,
+        JsonLanguageManager.Instance
+    };
+
+    /// <summary>
+    /// Available cultures for the selector dropdown.
+    /// </summary>
+    public IList<LinguaCulture> Cultures { get; } = new List<LinguaCulture>
+    {
+        new() { Culture = CultureInfo.InvariantCulture, DisplayName = "English" },
+        new() { Culture = new CultureInfo("zh-Hans"), DisplayName = "简体中文" }
+    };
 
     // ── RESX-based observables ───────────────────────────────────────────────
 
