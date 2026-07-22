@@ -3,18 +3,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Globalization;
-using System.Windows.Input;
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Interactivity;
-using Irihi.Avalonia.Shared.Common;
 using Irihi.Lingua;
 
 namespace Irihi.Luna.Lingua;
 
 /// <summary>
-/// A user control that provides culture selection UI via a dropdown button,
+/// A TemplatedControl that provides culture selection UI via a ComboBox,
 /// driving one or more <see cref="ILinguaManager"/> instances.
 /// </summary>
 public class CulturePicker : TemplatedControl
@@ -30,19 +26,6 @@ public class CulturePicker : TemplatedControl
 
     public static readonly StyledProperty<LinguaCulture?> SelectedItemProperty =
         AvaloniaProperty.Register<CulturePicker, LinguaCulture?>(nameof(SelectedItem));
-
-    public static readonly StyledProperty<ICommand?> SelectionCommandProperty =
-        AvaloniaProperty.Register<CulturePicker, ICommand?>(nameof(SelectionCommand));
-
-    /// <summary>
-    /// Command executed when a culture is selected from the dropdown.
-    /// Bound from the Template's MenuItem style.
-    /// </summary>
-    public ICommand? SelectionCommand
-    {
-        get => GetValue(SelectionCommandProperty);
-        set => SetValue(SelectionCommandProperty, value);
-    }
 
     public IList<ILinguaManager>? Managers
     {
@@ -83,47 +66,6 @@ public class CulturePicker : TemplatedControl
 
         WireCollectionChanged(defaultManagers, ref _observedManagers, OnManagersCollectionChanged);
         WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
-
-        SetCurrentValue(SelectionCommandProperty, new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected));
-    }
-
-    protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
-    {
-        base.OnApplyTemplate(e);
-
-        if (e.NameScope.Find<DropDownButton>("PART_DropDownButton") is { Flyout: MenuFlyout flyout })
-        {
-            flyout.Opening += OnFlyoutOpening;
-        }
-    }
-
-    private void OnFlyoutOpening(object? sender, EventArgs e)
-    {
-        if (sender is not MenuFlyout flyout) return;
-
-        foreach (MenuItem? item in flyout.Items)
-        {
-            if (item is null) continue;
-            item.Command = SelectionCommand;
-            item.CommandParameter = item.DataContext;
-        }
-    }
-
-    private void OnCultureSelected(LinguaCulture? culture)
-    {
-        if (culture is null) return;
-
-        var cultures = Cultures;
-        if (cultures is null) return;
-
-        for (int i = 0; i < cultures.Count; i++)
-        {
-            if (ReferenceEquals(cultures[i], culture))
-            {
-                SelectedIndex = i;
-                return;
-            }
-        }
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

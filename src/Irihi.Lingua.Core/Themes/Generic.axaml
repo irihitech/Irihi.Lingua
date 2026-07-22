@@ -8,10 +8,10 @@
         <ControlTheme x:Key="{x:Type lingua:CulturePicker}" TargetType="lingua:CulturePicker">
             <Setter Property="Template">
                 <ControlTemplate>
-                    <DropDownButton x:Name="PART_DropDownButton"
-                                    Content="{Binding SelectedItem, RelativeSource={RelativeSource TemplatedParent}}"
-                                    HorizontalAlignment="Stretch">
-                        <DropDownButton.ContentTemplate>
+                    <ComboBox ItemsSource="{Binding Cultures, RelativeSource={RelativeSource TemplatedParent}}"
+                              SelectedIndex="{Binding SelectedIndex, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="lingua:LinguaCulture">
                                 <StackPanel Orientation="Horizontal">
                                     <PathIcon Width="16" Height="16"
@@ -21,18 +21,8 @@
                                                VerticalAlignment="Center" />
                                 </StackPanel>
                             </DataTemplate>
-                        </DropDownButton.ContentTemplate>
-                        <DropDownButton.Flyout>
-                            <MenuFlyout Placement="BottomEdgeAlignedRight"
-                                        ItemsSource="{Binding Cultures, RelativeSource={RelativeSource TemplatedParent}}">
-                                <MenuFlyout.ItemTemplate>
-                                    <DataTemplate x:DataType="lingua:LinguaCulture">
-                                        <TextBlock Text="{Binding DisplayText}" />
-                                    </DataTemplate>
-                                </MenuFlyout.ItemTemplate>
-                            </MenuFlyout>
-                        </DropDownButton.Flyout>
-                    </DropDownButton>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </ControlTemplate>
             </Setter>
         </ControlTheme>
