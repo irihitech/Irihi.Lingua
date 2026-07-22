@@ -21,9 +21,6 @@ public class CulturePicker : TemplatedControl
     public static readonly StyledProperty<IList<LinguaCulture>?> CulturesProperty =
         AvaloniaProperty.Register<CulturePicker, IList<LinguaCulture>?>(nameof(Cultures));
 
-    public static readonly StyledProperty<int> SelectedIndexProperty =
-        AvaloniaProperty.Register<CulturePicker, int>(nameof(SelectedIndex), defaultValue: -1);
-
     public static readonly StyledProperty<LinguaCulture?> SelectedItemProperty =
         AvaloniaProperty.Register<CulturePicker, LinguaCulture?>(nameof(SelectedItem));
 
@@ -37,12 +34,6 @@ public class CulturePicker : TemplatedControl
     {
         get => GetValue(CulturesProperty);
         set => SetValue(CulturesProperty, value);
-    }
-
-    public int SelectedIndex
-    {
-        get => GetValue(SelectedIndexProperty);
-        set => SetValue(SelectedIndexProperty, value);
     }
 
     public LinguaCulture? SelectedItem
@@ -72,11 +63,9 @@ public class CulturePicker : TemplatedControl
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == SelectedIndexProperty)
+        if (change.Property == SelectedItemProperty)
         {
-            var index = change.GetNewValue<int>();
-            OnSelectedIndexChanged(index);
-            SyncSelectedItem(index);
+            OnSelectedItemChanged(change.GetNewValue<LinguaCulture?>());
         }
         else if (change.Property == ManagersProperty)
         {
@@ -90,29 +79,24 @@ public class CulturePicker : TemplatedControl
             var newList = change.GetNewValue<IList<LinguaCulture>?>();
             if (!ReferenceEquals(change.GetOldValue<IList<LinguaCulture>?>(), newList))
                 WireCollectionChanged(newList, ref _observedCultures, OnCulturesCollectionChanged);
-            SyncSelectedIndexFromPrimary();
+            SyncSelectedItemFromPrimary();
         }
     }
 
-    private void OnSelectedIndexChanged(int index)
+    private void OnSelectedItemChanged(LinguaCulture? item)
     {
-        if (_suppressSync)
+        if (_suppressSync || item is null)
             return;
 
         var managers = Managers;
-        var cultures = Cultures;
-
-        if (managers is null || cultures is null || index < 0 || index >= cultures.Count)
-            return;
-
-        var culture = cultures[index].Culture;
+        if (managers is null) return;
 
         _suppressSync = true;
         try
         {
             foreach (var manager in managers)
             {
-                manager?.UpdateCulture(culture);
+                manager?.UpdateCulture(item.Culture);
             }
         }
         finally
@@ -135,7 +119,7 @@ public class CulturePicker : TemplatedControl
                 new CultureChangeObserver(this));
         }
 
-        SyncSelectedIndexFromPrimary();
+        SyncSelectedItemFromPrimary();
     }
 
     private void OnManagersCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -145,19 +129,10 @@ public class CulturePicker : TemplatedControl
 
     private void OnCulturesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        SyncSelectedIndexFromPrimary();
+        SyncSelectedItemFromPrimary();
     }
 
-    private void SyncSelectedItem(int index)
-    {
-        var cultures = Cultures;
-        if (cultures is not null && index >= 0 && index < cultures.Count)
-            SetCurrentValue(SelectedItemProperty, cultures[index]);
-        else
-            SetCurrentValue(SelectedItemProperty, null);
-    }
-
-    private void SyncSelectedIndexFromPrimary()
+    private void SyncSelectedItemFromPrimary()
     {
         var managers = Managers;
         var cultures = Cultures;
@@ -165,7 +140,7 @@ public class CulturePicker : TemplatedControl
         var primary = managers is not null && managers.Count > 0 ? managers[0] : null;
         if (primary is null || cultures is null || cultures.Count == 0)
         {
-            SetCurrentValue(SelectedIndexProperty, -1);
+            SetCurrentValue(SelectedItemProperty, null);
             return;
         }
 
@@ -174,12 +149,12 @@ public class CulturePicker : TemplatedControl
         {
             if (cultures[i].Culture.Name == current.Name)
             {
-                SetCurrentValue(SelectedIndexProperty, i);
+                SetCurrentValue(SelectedItemProperty, cultures[i]);
                 return;
             }
         }
 
-        SetCurrentValue(SelectedIndexProperty, -1);
+        SetCurrentValue(SelectedItemProperty, null);
     }
 
     private static void WireCollectionChanged<T>(
@@ -211,7 +186,7 @@ public class CulturePicker : TemplatedControl
         public void OnNext(CultureInfo value)
         {
             if (_owner._suppressSync) return;
-            _owner.SyncSelectedIndexFromPrimary();
+            _owner.SyncSelectedItemFromPrimary();
         }
     }
 }

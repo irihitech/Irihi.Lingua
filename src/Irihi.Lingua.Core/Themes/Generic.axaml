@@ -9,7 +9,7 @@
             <Setter Property="Template">
                 <ControlTemplate>
                     <ComboBox ItemsSource="{Binding Cultures, RelativeSource={RelativeSource TemplatedParent}}"
-                              SelectedIndex="{Binding SelectedIndex, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                              SelectedItem="{Binding SelectedItem, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                               HorizontalAlignment="Stretch">
                         <ComboBox.SelectionBoxItemTemplate>
                             <DataTemplate x:DataType="lingua:LinguaCulture">
