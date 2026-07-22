@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -96,7 +94,7 @@ public class CulturePicker : TemplatedControl
         {
             foreach (var manager in managers)
             {
-                manager?.UpdateCulture(item.Culture);
+                manager.UpdateCulture(item.Culture);
             }
         }
         finally
@@ -145,13 +143,11 @@ public class CulturePicker : TemplatedControl
         }
 
         var current = primary.CurrentCulture;
-        for (int i = 0; i < cultures.Count; i++)
+        foreach (var item in cultures)
         {
-            if (Equals(cultures[i].Culture, current))
-            {
-                SetCurrentValue(SelectedItemProperty, cultures[i]);
-                return;
-            }
+            if (!Equals(item.Culture, current)) continue;
+            SetCurrentValue(SelectedItemProperty, item);
+            return;
         }
 
         SetCurrentValue(SelectedItemProperty, null);
@@ -174,19 +170,15 @@ public class CulturePicker : TemplatedControl
             field.CollectionChanged += handler;
     }
 
-    private sealed class CultureChangeObserver : IObserver<CultureInfo>
+    private sealed class CultureChangeObserver(CulturePicker owner) : IObserver<CultureInfo>
     {
-        private readonly CulturePicker _owner;
-
-        public CultureChangeObserver(CulturePicker owner) => _owner = owner;
-
         public void OnCompleted() { }
         public void OnError(Exception error) { }
 
         public void OnNext(CultureInfo value)
         {
-            if (_owner._suppressSync) return;
-            _owner.SyncSelectedItemFromPrimary();
+            if (owner._suppressSync) return;
+            owner.SyncSelectedItemFromPrimary();
         }
     }
 }
