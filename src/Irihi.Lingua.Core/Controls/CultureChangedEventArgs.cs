@@ -1,6 +1,6 @@
 using Avalonia.Interactivity;
 
-namespace Irihi.Luna.Lingua;
+namespace Irihi.Lingua;
 
 /// <summary>
 /// Event arguments for <see cref="CulturePicker.CultureChangedEvent"/>,

@@ -7,7 +7,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Irihi.Lingua;
 
-namespace Irihi.Luna.Lingua;
+namespace Irihi.Lingua;
 
 /// <summary>
 /// A TemplatedControl that provides culture selection UI via a ComboBox,

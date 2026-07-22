@@ -3,7 +3,6 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Irihi.Lingua;
-using Irihi.Luna.Lingua;
 
 namespace Irihi.Lingua.AvaloniaDemo.ViewModels;
 

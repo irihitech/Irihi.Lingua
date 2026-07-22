@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using Avalonia.Metadata;
 
-namespace Irihi.Luna.Lingua;
+namespace Irihi.Lingua;
 
 /// <summary>
 /// A culture entry for <see cref="CulturePicker"/>, pairing a
