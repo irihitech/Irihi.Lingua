@@ -1,8 +1,10 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls.Primitives;
+using Avalonia.Interactivity;
 using Irihi.Lingua;
 
 namespace Irihi.Luna.Lingua;
@@ -22,6 +24,14 @@ public class CulturePicker : TemplatedControl
     public static readonly StyledProperty<LinguaCulture?> SelectedItemProperty =
         AvaloniaProperty.Register<CulturePicker, LinguaCulture?>(nameof(SelectedItem));
 
+    /// <summary>
+    /// Raised when the selected culture changes, carrying the new
+    /// <see cref="LinguaCulture"/> (or <c>null</c> when selection is cleared).
+    /// </summary>
+    public static readonly RoutedEvent<CultureChangedEventArgs> CultureChangedEvent =
+        RoutedEvent.Register<CulturePicker, CultureChangedEventArgs>(
+            nameof(CultureChanged), RoutingStrategies.Bubble);
+
     public IList<ILinguaManager>? Managers
     {
         get => GetValue(ManagersProperty);
@@ -38,6 +48,16 @@ public class CulturePicker : TemplatedControl
     {
         get => GetValue(SelectedItemProperty);
         set => SetValue(SelectedItemProperty, value);
+    }
+
+    /// <summary>
+    /// CLR event for <see cref="CultureChangedEvent"/>.
+    /// Subscribe to receive the new <see cref="LinguaCulture"/> on every change.
+    /// </summary>
+    public event EventHandler<CultureChangedEventArgs> CultureChanged
+    {
+        add => AddHandler(CultureChangedEvent, value);
+        remove => RemoveHandler(CultureChangedEvent, value);
     }
 
     private IDisposable? _primaryCultureSubscription;
@@ -101,6 +121,8 @@ public class CulturePicker : TemplatedControl
         {
             _suppressSync = false;
         }
+
+        RaiseEvent(new CultureChangedEventArgs(CultureChangedEvent, item));
     }
 
     private void OnManagersChanged()
