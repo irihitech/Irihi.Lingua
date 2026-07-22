@@ -15,7 +15,7 @@ namespace Irihi.Luna.Lingua;
 /// A user control that provides culture selection UI via a dropdown button,
 /// driving one or more <see cref="ILinguaManager"/> instances.
 /// </summary>
-public partial class CulturePicker : TemplatedControl
+public class CulturePicker : TemplatedControl
 {
     public static readonly StyledProperty<IList<ILinguaManager>?> ManagersProperty =
         AvaloniaProperty.Register<CulturePicker, IList<ILinguaManager>?>(nameof(Managers));
