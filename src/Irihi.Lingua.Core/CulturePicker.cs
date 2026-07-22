@@ -147,7 +147,7 @@ public class CulturePicker : TemplatedControl
         var current = primary.CurrentCulture;
         for (int i = 0; i < cultures.Count; i++)
         {
-            if (cultures[i].Culture.Name == current.Name)
+            if (Equals(cultures[i].Culture, current))
             {
                 SetCurrentValue(SelectedItemProperty, cultures[i]);
                 return;
