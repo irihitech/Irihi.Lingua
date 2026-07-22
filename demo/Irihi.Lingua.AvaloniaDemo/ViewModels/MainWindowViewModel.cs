@@ -30,10 +30,10 @@ public partial class MainWindowViewModel : ObservableObject
             new DelegateObserver<CultureInfo>(c => CurrentCultureDisplay = c.EnglishName));
     }
 
-    // ── LinguaCultureSelector support ────────────────────────────────────────
+    // ── CulturePicker support ───────────────────────────────────────────────
 
     /// <summary>
-    /// Manager collection for <see cref="LinguaCultureSelector"/>.
+    /// Manager collection for <see cref="CulturePicker"/>.
     /// Both RESX and JSON managers follow the selected culture.
     /// </summary>
     public IList<ILinguaManager> Managers { get; } = new List<ILinguaManager>

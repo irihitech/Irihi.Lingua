@@ -15,19 +15,19 @@ namespace Irihi.Luna.Lingua;
 /// A user control that provides culture selection UI via a dropdown button,
 /// driving one or more <see cref="ILinguaManager"/> instances.
 /// </summary>
-public partial class LinguaCultureSelector : UserControl
+public partial class CulturePicker : UserControl
 {
     public static readonly StyledProperty<IList<ILinguaManager>?> ManagersProperty =
-        AvaloniaProperty.Register<LinguaCultureSelector, IList<ILinguaManager>?>(nameof(Managers));
+        AvaloniaProperty.Register<CulturePicker, IList<ILinguaManager>?>(nameof(Managers));
 
     public static readonly StyledProperty<IList<LinguaCulture>?> CulturesProperty =
-        AvaloniaProperty.Register<LinguaCultureSelector, IList<LinguaCulture>?>(nameof(Cultures));
+        AvaloniaProperty.Register<CulturePicker, IList<LinguaCulture>?>(nameof(Cultures));
 
     public static readonly StyledProperty<int> SelectedIndexProperty =
-        AvaloniaProperty.Register<LinguaCultureSelector, int>(nameof(SelectedIndex), defaultValue: -1);
+        AvaloniaProperty.Register<CulturePicker, int>(nameof(SelectedIndex), defaultValue: -1);
 
     public static readonly StyledProperty<LinguaCulture?> SelectedItemProperty =
-        AvaloniaProperty.Register<LinguaCultureSelector, LinguaCulture?>(nameof(SelectedItem));
+        AvaloniaProperty.Register<CulturePicker, LinguaCulture?>(nameof(SelectedItem));
 
     /// <summary>
     /// Command executed when a culture is selected from the dropdown.
@@ -64,7 +64,7 @@ public partial class LinguaCultureSelector : UserControl
     private INotifyCollectionChanged? _observedCultures;
     private bool _suppressSync;
 
-    public LinguaCultureSelector()
+    public CulturePicker()
     {
         var defaultManagers = new ObservableCollection<ILinguaManager>();
         var defaultCultures = new ObservableCollection<LinguaCulture>();
@@ -230,9 +230,9 @@ public partial class LinguaCultureSelector : UserControl
 
     private sealed class CultureChangeObserver : IObserver<CultureInfo>
     {
-        private readonly LinguaCultureSelector _owner;
+        private readonly CulturePicker _owner;
 
-        public CultureChangeObserver(LinguaCultureSelector owner) => _owner = owner;
+        public CultureChangeObserver(CulturePicker owner) => _owner = owner;
 
         public void OnCompleted() { }
         public void OnError(Exception error) { }

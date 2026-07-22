@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:lingua="using:Irihi.Luna.Lingua"
-             x:Class="Irihi.Luna.Lingua.LinguaCultureSelector"
+             x:Class="Irihi.Luna.Lingua.CulturePicker"
              x:Name="Root">
     <UserControl.Resources>
         <StreamGeometry x:Key="SemiIconLanguage">

@@ -5,7 +5,7 @@ using Avalonia.Metadata;
 namespace Irihi.Luna.Lingua;
 
 /// <summary>
-/// A culture entry for <see cref="LinguaCultureSelector"/>, pairing a
+/// A culture entry for <see cref="CulturePicker"/>, pairing a
 /// <see cref="CultureInfo"/> with an optional custom display name.
 /// </summary>
 /// <remarks>
