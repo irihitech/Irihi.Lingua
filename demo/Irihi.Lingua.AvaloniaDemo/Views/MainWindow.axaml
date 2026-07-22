@@ -49,7 +49,7 @@
                         <x:Static Member="local:JsonLanguageManager.Instance" />
                     </luna:LinguaCultureSelector.Managers>
                     <luna:LinguaCultureSelector.Cultures>
-                        <luna:LinguaCulture>iv</luna:LinguaCulture>
+                        <x:Static Member="luna:LinguaCulture.InvariantCulture" />
                         <luna:LinguaCulture DisplayName="简体中文" Culture="zh-Hans" />
                         <luna:LinguaCulture>ja-JP</luna:LinguaCulture>
                     </luna:LinguaCultureSelector.Cultures>

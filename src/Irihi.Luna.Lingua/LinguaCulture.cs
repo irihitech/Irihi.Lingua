@@ -29,7 +29,7 @@ public class LinguaCulture
     public static readonly LinguaCulture InvariantCulture = new()
     {
         Culture = CultureInfo.InvariantCulture,
-        DisplayName = "English"
+        DisplayName = CultureInfo.InvariantCulture.NativeName,
     };
     /// <summary>
     /// Gets or sets the culture identifier string.
