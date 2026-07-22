@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Globalization;
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
+using Irihi.Avalonia.Shared.Common;
 using Irihi.Lingua;
 
 namespace Irihi.Luna.Lingua;
@@ -24,6 +25,15 @@ public partial class LinguaCultureSelector : UserControl
 
     public static readonly StyledProperty<int> SelectedIndexProperty =
         AvaloniaProperty.Register<LinguaCultureSelector, int>(nameof(SelectedIndex), defaultValue: -1);
+
+    public static readonly StyledProperty<ICommand?> SelectionCommandProperty =
+        AvaloniaProperty.Register<LinguaCultureSelector, ICommand?>(nameof(SelectionCommand));
+
+    public ICommand? SelectionCommand
+    {
+        get => GetValue(SelectionCommandProperty);
+        set => SetValue(SelectionCommandProperty, value);
+    }
 
     public IList<ILinguaManager>? Managers
     {
@@ -60,9 +70,28 @@ public partial class LinguaCultureSelector : UserControl
         WireCollectionChanged(defaultManagers, ref _observedManagers, OnManagersCollectionChanged);
         WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
 
+        SetCurrentValue(SelectionCommandProperty, new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected));
+
         InitializeComponent();
 
         CultureButton.Content = _defaultButtonContent;
+    }
+
+    private void OnCultureSelected(LinguaCulture? culture)
+    {
+        if (culture is null) return;
+
+        var cultures = Cultures;
+        if (cultures is null) return;
+
+        for (int i = 0; i < cultures.Count; i++)
+        {
+            if (ReferenceEquals(cultures[i], culture))
+            {
+                SelectedIndex = i;
+                return;
+            }
+        }
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -141,40 +170,6 @@ public partial class LinguaCultureSelector : UserControl
     private void OnCulturesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         SyncSelectedIndexFromPrimary();
-    }
-
-    /// <summary>
-    /// Called from XAML when the flyout opens.  We walk every generated
-    /// <see cref="MenuItem"/> and hook its <c>Click</c> so that selecting an
-    /// entry drives <see cref="SelectedIndex"/>.
-    /// </summary>
-    private void OnMenuFlyoutOpened(object? sender, EventArgs e)
-    {
-        if (sender is not MenuFlyout flyout) return;
-
-        foreach (MenuItem? item in flyout.Items)
-        {
-            if (item is null) continue;
-            item.Click -= OnCultureMenuItemClick;
-            item.Click += OnCultureMenuItemClick;
-        }
-    }
-
-    private void OnCultureMenuItemClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not MenuItem { DataContext: LinguaCulture clicked }) return;
-
-        var cultures = Cultures;
-        if (cultures is null) return;
-
-        for (int i = 0; i < cultures.Count; i++)
-        {
-            if (ReferenceEquals(cultures[i], clicked))
-            {
-                SelectedIndex = i;
-                return;
-            }
-        }
     }
 
     private void SyncSelectedIndexFromPrimary()

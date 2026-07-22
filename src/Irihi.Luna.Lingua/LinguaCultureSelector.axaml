@@ -7,9 +7,14 @@
     <DropDownButton x:Name="CultureButton"
                     Content="Select culture"
                     HorizontalAlignment="Stretch">
+        <DropDownButton.Styles>
+            <Style Selector="MenuItem" x:DataType="lingua:LinguaCulture">
+                <Setter Property="Command" Value="{Binding #Root.SelectionCommand}" />
+                <Setter Property="CommandParameter" Value="{Binding .}" />
+            </Style>
+        </DropDownButton.Styles>
         <DropDownButton.Flyout>
-            <MenuFlyout ItemsSource="{Binding #Root.Cultures}"
-                        Opened="OnMenuFlyoutOpened">
+            <MenuFlyout ItemsSource="{Binding #Root.Cultures}">
                 <MenuFlyout.ItemTemplate>
                     <DataTemplate x:DataType="lingua:LinguaCulture">
                         <TextBlock Text="{Binding DisplayText}" />
