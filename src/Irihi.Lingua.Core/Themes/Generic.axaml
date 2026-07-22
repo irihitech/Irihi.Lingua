@@ -11,7 +11,7 @@
                     <ComboBox ItemsSource="{Binding Cultures, RelativeSource={RelativeSource TemplatedParent}}"
                               SelectedIndex="{Binding SelectedIndex, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                               HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
+                        <ComboBox.SelectionBoxItemTemplate>
                             <DataTemplate x:DataType="lingua:LinguaCulture">
                                 <StackPanel Orientation="Horizontal">
                                     <PathIcon Width="16" Height="16"
@@ -20,6 +20,11 @@
                                     <TextBlock Text="{Binding DisplayText}"
                                                VerticalAlignment="Center" />
                                 </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.SelectionBoxItemTemplate>
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="lingua:LinguaCulture">
+                                <TextBlock Text="{Binding DisplayText}" VerticalAlignment="Center" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
