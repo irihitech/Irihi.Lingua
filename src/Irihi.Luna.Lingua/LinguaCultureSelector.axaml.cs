@@ -26,14 +26,11 @@ public partial class LinguaCultureSelector : UserControl
     public static readonly StyledProperty<int> SelectedIndexProperty =
         AvaloniaProperty.Register<LinguaCultureSelector, int>(nameof(SelectedIndex), defaultValue: -1);
 
-    public static readonly StyledProperty<ICommand?> SelectionCommandProperty =
-        AvaloniaProperty.Register<LinguaCultureSelector, ICommand?>(nameof(SelectionCommand));
-
-    internal ICommand? SelectionCommand
-    {
-        get => GetValue(SelectionCommandProperty);
-        set => SetValue(SelectionCommandProperty, value);
-    }
+    /// <summary>
+    /// Command executed when a culture is selected from the dropdown.
+    /// Bound from the XAML MenuItem style.
+    /// </summary>
+    internal ICommand? SelectionCommand { get; set; }
 
     public IList<ILinguaManager>? Managers
     {
@@ -70,7 +67,7 @@ public partial class LinguaCultureSelector : UserControl
         WireCollectionChanged(defaultManagers, ref _observedManagers, OnManagersCollectionChanged);
         WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
 
-        SetCurrentValue(SelectionCommandProperty, new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected));
+        SelectionCommand = new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected);
 
         InitializeComponent();
 
