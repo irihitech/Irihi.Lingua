@@ -36,7 +36,19 @@ public class LinguaCultureTests
     }
 
     [Fact]
-    public void DisplayText_UsesDisplayName_WhenSet()
+    public void DisplayText_UsesShortDisplayNameFirst()
+    {
+        var lc = new LinguaCulture
+        {
+            Culture = new CultureInfo("zh-Hans"),
+            DisplayName = "Chinese (Simplified)",
+            ShortDisplayName = "中文"
+        };
+        Assert.Equal("中文", lc.DisplayText);
+    }
+
+    [Fact]
+    public void DisplayText_FallsBackToDisplayName()
     {
         var lc = new LinguaCulture { Culture = new CultureInfo("en"), DisplayName = "English" };
         Assert.Equal("English", lc.DisplayText);

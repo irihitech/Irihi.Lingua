@@ -58,10 +58,21 @@ public class LinguaCulture
     public string? DisplayName { get; set; }
 
     /// <summary>
-    /// Gets the text to display in the selector UI —
-    /// <see cref="DisplayName"/> if set, otherwise <see cref="CultureInfo.NativeName"/>.
+    /// Gets or sets an optional shorter display name used when the selector
+    /// shows the currently selected item.
+    /// Falls back to <see cref="DisplayName"/> then <see cref="CultureInfo.NativeName"/>.
     /// </summary>
-    public string DisplayText => DisplayName ?? Culture.NativeName;
+    /// <example>
+    /// DisplayName = "Chinese (Simplified)", ShortDisplayName = "中文"
+    /// </example>
+    public string? ShortDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets the text to display in the selector UI —
+    /// <see cref="ShortDisplayName"/> if set, else <see cref="DisplayName"/>,
+    /// else <see cref="CultureInfo.NativeName"/>.
+    /// </summary>
+    public string DisplayText => ShortDisplayName ?? DisplayName ?? Culture.NativeName;
 }
 
 /// <summary>
