@@ -7,7 +7,6 @@
   <Folder Name="/src/">
     <Project Path="src/Irihi.Lingua.Core/Irihi.Lingua.Core.csproj" />
     <Project Path="src/Irihi.Lingua.Generator/Irihi.Lingua.Generator.csproj" />
-    <Project Path="src/Irihi.Luna.Lingua/Irihi.Luna.Lingua.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Irihi.Lingua.Core.Tests/Irihi.Lingua.Core.Tests.csproj" />
