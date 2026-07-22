@@ -23,6 +23,15 @@ namespace Irihi.Luna.Lingua;
 public class LinguaCulture
 {
     /// <summary>
+    /// A pre-defined <see cref="LinguaCulture"/> entry for
+    /// <see cref="CultureInfo.InvariantCulture"/>, displayed as "English".
+    /// </summary>
+    public static readonly LinguaCulture InvariantCulture = new()
+    {
+        Culture = CultureInfo.InvariantCulture,
+        DisplayName = "English"
+    };
+    /// <summary>
     /// Gets or sets the culture identifier string.
     /// This is the <see cref="ContentAttribute">Content</see> property — XAML
     /// inner text such as <c>&lt;LinguaCulture&gt;en&lt;/LinguaCulture&gt;</c>
