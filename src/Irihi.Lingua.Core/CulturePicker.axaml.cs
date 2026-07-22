@@ -5,7 +5,7 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Windows.Input;
 using Avalonia;
-using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Irihi.Avalonia.Shared.Common;
 using Irihi.Lingua;
 
@@ -15,7 +15,7 @@ namespace Irihi.Luna.Lingua;
 /// A user control that provides culture selection UI via a dropdown button,
 /// driving one or more <see cref="ILinguaManager"/> instances.
 /// </summary>
-public partial class CulturePicker : UserControl
+public partial class CulturePicker : TemplatedControl
 {
     public static readonly StyledProperty<IList<ILinguaManager>?> ManagersProperty =
         AvaloniaProperty.Register<CulturePicker, IList<ILinguaManager>?>(nameof(Managers));
@@ -76,8 +76,6 @@ public partial class CulturePicker : UserControl
         WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
 
         SelectionCommand = new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected);
-
-        InitializeComponent();
     }
 
     private void OnCultureSelected(LinguaCulture? culture)
