@@ -6,6 +6,6 @@
 
     <Application.Styles>
         <FluentTheme />
-        <StyleInclude></StyleInclude>
+        <StyleInclude Source="avares://Irihi.Lingua.Core/Themes/Generic.axaml" />
     </Application.Styles>
 </Application>

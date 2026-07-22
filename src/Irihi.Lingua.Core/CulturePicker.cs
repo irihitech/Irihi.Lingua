@@ -53,7 +53,7 @@ public class CulturePicker : TemplatedControl
         set => SetValue(SelectedIndexProperty, value);
     }
 
-    internal LinguaCulture? SelectedItem
+    public LinguaCulture? SelectedItem
     {
         get => GetValue(SelectedItemProperty);
         set => SetValue(SelectedItemProperty, value);
