@@ -19,13 +19,16 @@ namespace Irihi.Luna.Lingua;
 /// user makes a selection.
 /// </remarks>
 /// <example>
-/// <strong>XAML inline:</strong>
+/// <strong>XAML (inline cultures + managers):</strong>
 /// <code><![CDATA[
-/// <luna:LinguaCultureSelector AvailableCultures="{Binding SupportedCultures}">
+/// <luna:LinguaCultureSelector>
 ///   <luna:LinguaCultureSelector.Managers>
 ///     <local:AppManager.Instance />
-///     <local:PluginManager.Instance />
 ///   </luna:LinguaCultureSelector.Managers>
+///   <luna:LinguaCultureSelector.Cultures>
+///     <luna:LinguaCulture>zh-Hans</luna:LinguaCulture>
+///     <luna:LinguaCulture DisplayName="English">en</luna:LinguaCulture>
+///   </luna:LinguaCultureSelector.Cultures>
 /// </luna:LinguaCultureSelector>
 /// ]]></code>
 /// </example>
@@ -38,12 +41,10 @@ public partial class LinguaCultureSelector : UserControl
         AvaloniaProperty.Register<LinguaCultureSelector, IList<ILinguaManager>?>(nameof(Managers));
 
     /// <summary>
-    /// Identifies the <see cref="AvailableCultures"/> styled property.
+    /// Identifies the <see cref="Cultures"/> styled property.
     /// </summary>
-    public static readonly StyledProperty<IReadOnlyList<CultureInfo>> AvailableCulturesProperty =
-        AvaloniaProperty.Register<LinguaCultureSelector, IReadOnlyList<CultureInfo>>(
-            nameof(AvailableCultures),
-            defaultValue: new List<CultureInfo>());
+    public static readonly StyledProperty<IList<LinguaCulture>?> CulturesProperty =
+        AvaloniaProperty.Register<LinguaCultureSelector, IList<LinguaCulture>?>(nameof(Cultures));
 
     /// <summary>
     /// Identifies the <see cref="SelectedIndex"/> styled property.
@@ -65,15 +66,17 @@ public partial class LinguaCultureSelector : UserControl
 
     /// <summary>
     /// Gets or sets the list of cultures available for selection.
+    /// Each <see cref="LinguaCulture"/> wraps a <see cref="CultureInfo"/>
+    /// with an optional custom <see cref="LinguaCulture.DisplayName"/>.
     /// </summary>
-    public IReadOnlyList<CultureInfo> AvailableCultures
+    public IList<LinguaCulture>? Cultures
     {
-        get => GetValue(AvailableCulturesProperty);
-        set => SetValue(AvailableCulturesProperty, value);
+        get => GetValue(CulturesProperty);
+        set => SetValue(CulturesProperty, value);
     }
 
     /// <summary>
-    /// Gets or sets the index of the currently selected culture in <see cref="AvailableCultures"/>.
+    /// Gets or sets the index of the currently selected culture in <see cref="Cultures"/>.
     /// </summary>
     public int SelectedIndex
     {
@@ -87,6 +90,7 @@ public partial class LinguaCultureSelector : UserControl
     public LinguaCultureSelector()
     {
         SetCurrentValue(ManagersProperty, new List<ILinguaManager>());
+        SetCurrentValue(CulturesProperty, new List<LinguaCulture>());
         InitializeComponent();
     }
 
@@ -102,7 +106,7 @@ public partial class LinguaCultureSelector : UserControl
         {
             OnManagersChanged();
         }
-        else if (change.Property == AvailableCulturesProperty)
+        else if (change.Property == CulturesProperty)
         {
             SyncSelectedIndexFromPrimary();
         }
@@ -114,15 +118,13 @@ public partial class LinguaCultureSelector : UserControl
             return;
 
         var managers = Managers;
-        var cultures = AvailableCultures;
+        var cultures = Cultures;
 
         if (managers is null || cultures is null || index < 0 || index >= cultures.Count)
             return;
 
-        var culture = cultures[index];
+        var culture = cultures[index].Culture;
 
-        // Suppress the CultureChanges callback while we update managers,
-        // avoiding a feedback loop.
         _suppressSync = true;
         try
         {
@@ -141,11 +143,9 @@ public partial class LinguaCultureSelector : UserControl
     {
         var managers = Managers;
 
-        // Dispose previous subscription (if any).
         _primaryCultureSubscription?.Dispose();
         _primaryCultureSubscription = null;
 
-        // Subscribe to the primary manager's CultureChanges.
         var primary = managers is not null && managers.Count > 0 ? managers[0] : null;
         if (primary is not null)
         {
@@ -153,14 +153,13 @@ public partial class LinguaCultureSelector : UserControl
                 new CultureChangeObserver(this));
         }
 
-        // Sync the selector against the (possibly new) primary manager.
         SyncSelectedIndexFromPrimary();
     }
 
     private void SyncSelectedIndexFromPrimary()
     {
         var managers = Managers;
-        var cultures = AvailableCultures;
+        var cultures = Cultures;
 
         var primary = managers is not null && managers.Count > 0 ? managers[0] : null;
         if (primary is null || cultures is null || cultures.Count == 0)
@@ -172,7 +171,7 @@ public partial class LinguaCultureSelector : UserControl
         var current = primary.CurrentCulture;
         for (int i = 0; i < cultures.Count; i++)
         {
-            if (cultures[i].Name == current.Name)
+            if (cultures[i].Culture.Name == current.Name)
             {
                 SelectedIndex = i;
                 return;
@@ -197,7 +196,6 @@ public partial class LinguaCultureSelector : UserControl
 
         public void OnNext(CultureInfo value)
         {
-            // Ignore changes we triggered ourselves to avoid feedback loop.
             if (_owner._suppressSync)
                 return;
 

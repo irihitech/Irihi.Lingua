@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Irihi.Lingua.AvaloniaDemo.ViewModels"
         xmlns:local="using:Irihi.Lingua.AvaloniaDemo"
+        xmlns:luna="using:Irihi.Luna.Lingua"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="480"
@@ -18,6 +19,23 @@
 
     <StackPanel Spacing="16" Margin="40"
                 HorizontalAlignment="Center" VerticalAlignment="Center">
+
+        <!-- ═══ LinguaCultureSelector ═══ -->
+        <Border BorderBrush="ForestGreen" BorderThickness="1" CornerRadius="4" Padding="12">
+            <StackPanel Spacing="8">
+                <TextBlock Text="LinguaCultureSelector" FontSize="14" FontWeight="Bold"
+                           Foreground="ForestGreen" />
+                <TextBlock Text="Select a culture — both RESX and JSON managers follow."
+                           FontSize="11" Foreground="Gray" />
+
+                <luna:LinguaCultureSelector
+                    Managers="{Binding Managers}"
+                    Cultures="{Binding Cultures}" />
+
+                <TextBlock Text="{Binding CurrentCultureDisplay}"
+                           FontSize="12" Foreground="Gray" />
+            </StackPanel>
+        </Border>
 
         <!-- ═══ RESX section ═══ -->
         <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
