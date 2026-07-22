@@ -264,6 +264,15 @@ When either the current culture changes or any bound argument value changes, the
 `CulturePicker` is a `TemplatedControl` that provides a ready-to-use `ComboBox` for switching cultures.
 It drives one or more `ILinguaManager` instances and exposes a `CultureChanged` routed event.
 
+> **Important:** The control's template is defined in `Themes/Generic.axaml`. You must
+> include the theme style in your `App.axaml`, otherwise the picker will appear blank:
+>
+> ```xml
+> <Application.Styles>
+>     <StyleInclude Source="avares://Irihi.Lingua/Themes/Generic.axaml" />
+> </Application.Styles>
+> ```
+
 #### XAML with binding
 
 ```xml
