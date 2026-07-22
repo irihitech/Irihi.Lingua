@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -85,12 +87,21 @@ public partial class LinguaCultureSelector : UserControl
     }
 
     private IDisposable? _primaryCultureSubscription;
+    private INotifyCollectionChanged? _observedManagers;
+    private INotifyCollectionChanged? _observedCultures;
     private bool _suppressSync;
 
     public LinguaCultureSelector()
     {
-        SetCurrentValue(ManagersProperty, new List<ILinguaManager>());
-        SetCurrentValue(CulturesProperty, new List<LinguaCulture>());
+        var defaultManagers = new ObservableCollection<ILinguaManager>();
+        var defaultCultures = new ObservableCollection<LinguaCulture>();
+
+        SetCurrentValue(ManagersProperty, defaultManagers);
+        SetCurrentValue(CulturesProperty, defaultCultures);
+
+        WireCollectionChanged(defaultManagers, ref _observedManagers, OnManagersCollectionChanged);
+        WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
+
         InitializeComponent();
     }
 
@@ -104,10 +115,16 @@ public partial class LinguaCultureSelector : UserControl
         }
         else if (change.Property == ManagersProperty)
         {
+            var newList = change.GetNewValue<IList<ILinguaManager>?>();
+            if (!ReferenceEquals(change.GetOldValue<IList<ILinguaManager>?>(), newList))
+                WireCollectionChanged(newList, ref _observedManagers, OnManagersCollectionChanged);
             OnManagersChanged();
         }
         else if (change.Property == CulturesProperty)
         {
+            var newList = change.GetNewValue<IList<LinguaCulture>?>();
+            if (!ReferenceEquals(change.GetOldValue<IList<LinguaCulture>?>(), newList))
+                WireCollectionChanged(newList, ref _observedCultures, OnCulturesCollectionChanged);
             SyncSelectedIndexFromPrimary();
         }
     }
@@ -154,6 +171,35 @@ public partial class LinguaCultureSelector : UserControl
         }
 
         SyncSelectedIndexFromPrimary();
+    }
+
+    private void OnManagersCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Primary manager may have been added/removed — rewire.
+        OnManagersChanged();
+    }
+
+    private void OnCulturesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Cultures were added/removed inline — re-sync selection.
+        SyncSelectedIndexFromPrimary();
+    }
+
+    private static void WireCollectionChanged<T>(
+        IList<T>? newList,
+        ref INotifyCollectionChanged? field,
+        NotifyCollectionChangedEventHandler handler)
+    {
+        if (ReferenceEquals(field, newList))
+            return;
+
+        if (field is not null)
+            field.CollectionChanged -= handler;
+
+        field = newList as INotifyCollectionChanged;
+
+        if (field is not null)
+            field.CollectionChanged += handler;
     }
 
     private void SyncSelectedIndexFromPrimary()

@@ -5,7 +5,7 @@
              x:Name="Root">
     <ComboBox x:Name="CultureComboBox"
               ItemsSource="{Binding Cultures, ElementName=Root}"
-              SelectedIndex="{Binding SelectedIndex, ElementName=Root}">
+              SelectedIndex="{Binding SelectedIndex, ElementName=Root, Mode=TwoWay}">
         <ComboBox.ItemTemplate>
             <DataTemplate x:DataType="local:LinguaCulture">
                 <TextBlock Text="{Binding DisplayText}" />
