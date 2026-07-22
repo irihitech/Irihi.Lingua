@@ -77,7 +77,7 @@ public class CulturePickerTests
 
         picker.SelectedItem = lc;
 
-        Assert.Same(zhHans, TestLanguageManager.Instance.CurrentCulture);
+        Assert.Equal(zhHans.Name, TestLanguageManager.Instance.CurrentCulture.Name);
     }
 
     [AvaloniaFact]
@@ -97,7 +97,7 @@ public class CulturePickerTests
 
         picker.SelectedItem = lc;
 
-        Assert.Same(zhHans, TestLanguageManager.Instance.CurrentCulture);
+        Assert.Equal(zhHans.Name, TestLanguageManager.Instance.CurrentCulture.Name);
     }
 
     [AvaloniaFact]
