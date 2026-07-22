@@ -23,8 +23,7 @@
                         </DropDownButton.ContentTemplate>
                         <DropDownButton.Styles>
                             <Style Selector="MenuItem" x:DataType="lingua:LinguaCulture">
-                                <Setter Property="Command"
-                                        Value="{Binding SelectionCommand, RelativeSource={RelativeSource TemplatedParent}}" />
+                                <Setter Property="Command" Value="{Binding SelectionCommand, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=lingua:CulturePicker}}" />
                                 <Setter Property="CommandParameter" Value="{Binding .}" />
                             </Style>
                         </DropDownButton.Styles>

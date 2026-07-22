@@ -29,11 +29,18 @@ public class CulturePicker : TemplatedControl
     public static readonly StyledProperty<LinguaCulture?> SelectedItemProperty =
         AvaloniaProperty.Register<CulturePicker, LinguaCulture?>(nameof(SelectedItem));
 
+    public static readonly StyledProperty<ICommand?> SelectionCommandProperty =
+        AvaloniaProperty.Register<CulturePicker, ICommand?>(nameof(SelectionCommand));
+
     /// <summary>
     /// Command executed when a culture is selected from the dropdown.
-    /// Bound from the XAML MenuItem style.
+    /// Bound from the Template's MenuItem style.
     /// </summary>
-    internal ICommand? SelectionCommand { get; set; }
+    public ICommand? SelectionCommand
+    {
+        get => GetValue(SelectionCommandProperty);
+        set => SetValue(SelectionCommandProperty, value);
+    }
 
     public IList<ILinguaManager>? Managers
     {
@@ -75,7 +82,7 @@ public class CulturePicker : TemplatedControl
         WireCollectionChanged(defaultManagers, ref _observedManagers, OnManagersCollectionChanged);
         WireCollectionChanged(defaultCultures, ref _observedCultures, OnCulturesCollectionChanged);
 
-        SelectionCommand = new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected);
+        SetCurrentValue(SelectionCommandProperty, new IRIHI_CommandBase<LinguaCulture>(OnCultureSelected));
     }
 
     private void OnCultureSelected(LinguaCulture? culture)
