@@ -165,6 +165,86 @@ public class LinguaRuntimeResourcesTests
         Assert.Equal("original", snapshot["K"]);
     }
 
+    // ── GetAllValuesForKey ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void GetAllValuesForKey_NullKey_ThrowsArgumentNullException()
+    {
+        var store = new LinguaRuntimeResources();
+        Assert.Throws<ArgumentNullException>(() =>
+            store.GetAllValuesForKey(null!).ToList());
+    }
+
+    [Fact]
+    public void GetAllValuesForKey_EmptyStore_ReturnsEmpty()
+    {
+        var store = new LinguaRuntimeResources();
+        var result = store.GetAllValuesForKey("AnyKey");
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void GetAllValuesForKey_KeyNotFound_ReturnsEmpty()
+    {
+        var store = new LinguaRuntimeResources();
+        store.Add(new CultureInfo("en"), new Dictionary<string, string> { ["A"] = "1" });
+
+        var result = store.GetAllValuesForKey("NonExistent");
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void GetAllValuesForKey_SingleCulture_ReturnsCorrectPair()
+    {
+        var store = new LinguaRuntimeResources();
+        var enUS = new CultureInfo("en-US");
+        store.Add(enUS, new Dictionary<string, string> { ["Title"] = "Hello" });
+
+        var result = store.GetAllValuesForKey("Title").ToList();
+        Assert.Single(result);
+        Assert.Equal(enUS, result[0].Key);
+        Assert.Equal("Hello", result[0].Value);
+    }
+
+    [Fact]
+    public void GetAllValuesForKey_MultipleCultures_ReturnsAllMatches()
+    {
+        var store = new LinguaRuntimeResources();
+        var enUS = new CultureInfo("en-US");
+        var jaJP = new CultureInfo("ja-JP");
+        var invariant = CultureInfo.InvariantCulture;
+
+        store.Add(enUS, new Dictionary<string, string> { ["Title"] = "Hello" });
+        store.Add(jaJP, new Dictionary<string, string> { ["Title"] = "こんにちは" });
+        store.Add(invariant, new Dictionary<string, string> { ["Title"] = "Default" });
+
+        var result = store.GetAllValuesForKey("Title").ToList();
+        Assert.Equal(3, result.Count);
+
+        var dict = result.ToDictionary(kv => kv.Key, kv => kv.Value);
+        Assert.Equal("Hello", dict[enUS]);
+        Assert.Equal("こんにちは", dict[jaJP]);
+        Assert.Equal("Default", dict[invariant]);
+    }
+
+    [Fact]
+    public void GetAllValuesForKey_ReturnsSnapshot_NotAffectedBySubsequentAdd()
+    {
+        var store = new LinguaRuntimeResources();
+        var enUS = new CultureInfo("en-US");
+        store.Add(enUS, new Dictionary<string, string> { ["Title"] = "original" });
+
+        var snapshot = store.GetAllValuesForKey("Title").ToList();
+
+        // Add more entries after taking the snapshot
+        store.Add(new CultureInfo("ja-JP"), new Dictionary<string, string> { ["Title"] = "後で追加" });
+
+        // Snapshot must still have only the original entry
+        Assert.Single(snapshot);
+        Assert.Equal(enUS, snapshot[0].Key);
+        Assert.Equal("original", snapshot[0].Value);
+    }
+
     // ── Safety: the Parent-chain walk must never loop infinitely ─────────────
 
     [Fact]

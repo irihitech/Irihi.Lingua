@@ -165,6 +165,29 @@ public class LinguaManagerGeneratorTests : LinguaManagerGeneratorTestBase
     }
 
     [Fact]
+    public void Generator_WithDefaultResx_ContainsGetTranslationsMethod()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        Assert.Contains(
+            "public global::System.Collections.Generic.IReadOnlyDictionary<global::System.Globalization.CultureInfo, string> GetTranslations(global::Irihi.Lingua.LinguaObservableString observable)",
+            source);
+    }
+
+    [Fact]
+    public void Generator_WithDefaultResx_GetTranslationsUsesGetAllValuesForKey()
+    {
+        var result = RunGenerator(InputSource,
+            ("Strings.resx", DefaultResxContent));
+
+        var source = result.GeneratedSources[0].SourceText.ToString();
+        Assert.Contains("_lingua_resources.GetAllValuesForKey(observable.Key)", source);
+        Assert.Contains("_lingua_runtime.GetAllValuesForKey(observable.Key)", source);
+    }
+
+    [Fact]
     public void Generator_WithDefaultResx_ContainsRuntimeResourcesField()
     {
         var result = RunGenerator(InputSource,
