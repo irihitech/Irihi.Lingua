@@ -5,5 +5,10 @@ namespace Irihi.Lingua.Avalonia.Tests;
 [LinguaManager("./Resources/Strings.resx")]
 public partial class TestLanguageManager
 {
-    public void Reset() => UpdateCulture(CultureInfo.InvariantCulture);
+    public void Reset()
+    {
+        _cultureChanges.ClearSubscribers();
+        ClearRuntimeResources();
+        UpdateCulture(CultureInfo.InvariantCulture);
+    }
 }

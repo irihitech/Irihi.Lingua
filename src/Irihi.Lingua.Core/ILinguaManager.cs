@@ -68,4 +68,32 @@ public interface ILinguaManager
     /// The key/value pairs to add.  Must not be <c>null</c>.
     /// </param>
     void AddResources(CultureInfo culture, IReadOnlyDictionary<string, string> resources);
+
+    /// <summary>
+    /// Returns every available translation for the key represented by
+    /// <paramref name="observable"/> across all cultures known to this manager.
+    /// </summary>
+    /// <remarks>
+    /// Runtime-added resources take precedence over compile-time ones for
+    /// the same culture.
+    /// </remarks>
+    /// <param name="observable">
+    /// The <see cref="LinguaObservableString"/> whose resource key is looked up.
+    /// </param>
+    /// <returns>
+    /// A dictionary mapping each <see cref="CultureInfo"/> to the corresponding
+    /// localized string.  Returns an empty dictionary when the key is unknown
+    /// to every culture.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="observable"/> is <c>null</c>.
+    /// </exception>
+    IReadOnlyDictionary<CultureInfo, string> GetTranslations(LinguaObservableString observable);
+
+    /// <summary>
+    /// Clears all runtime-added resources previously added via
+    /// <see cref="AddResources"/>. After calling this method, only
+    /// compile-time (embedded) resources remain.
+    /// </summary>
+    void ClearRuntimeResources();
 }

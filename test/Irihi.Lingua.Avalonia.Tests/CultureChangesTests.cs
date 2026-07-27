@@ -1,4 +1,5 @@
 using System.Globalization;
+using Avalonia.Headless.XUnit;
 using Xunit;
 
 namespace Irihi.Lingua.Avalonia.Tests;
@@ -17,7 +18,7 @@ namespace Irihi.Lingua.Avalonia.Tests;
 /// </remarks>
 public class CultureChangesTests
 {
-    [Fact]
+    [AvaloniaFact]
     public void CultureChanges_InitialValueIsInvariantCulture()
     {
         TestLanguageManager.Instance.Reset();
@@ -30,7 +31,7 @@ public class CultureChangesTests
         Assert.Same(CultureInfo.InvariantCulture, firstCulture);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CultureChanges_EmitsOnUpdateCulture()
     {
         TestLanguageManager.Instance.Reset();
@@ -48,11 +49,11 @@ public class CultureChangesTests
         var zhHans = new CultureInfo("zh-Hans");
         TestLanguageManager.Instance.UpdateCulture(zhHans);
 
-        Assert.Same(CultureInfo.InvariantCulture, initialCulture);
-        Assert.Same(zhHans, updatedCulture);
+        Assert.Equal(CultureInfo.InvariantCulture, initialCulture);
+        Assert.Equal(zhHans, updatedCulture);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CultureChanges_EmitsEvenWhenSameCulturePassedAgain()
     {
         TestLanguageManager.Instance.Reset();
@@ -72,7 +73,7 @@ public class CultureChangesTests
             $"Expected at least {countBefore + 3} notifications, got {Volatile.Read(ref notifyCount)}");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CultureChanges_MultipleSubscribers_AllNotified()
     {
         TestLanguageManager.Instance.Reset();
@@ -92,7 +93,7 @@ public class CultureChangesTests
         Assert.True(Volatile.Read(ref countB) > beforeB, "Subscriber B must receive at least one notification");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CultureChanges_DisposedSubscriberNotNotified()
     {
         TestLanguageManager.Instance.Reset();
@@ -108,7 +109,7 @@ public class CultureChangesTests
         Assert.Equal(countBefore, Volatile.Read(ref notifyCount));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CultureChanges_NullCulture_TreatsAsInvariant()
     {
         TestLanguageManager.Instance.Reset();

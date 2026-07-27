@@ -122,4 +122,39 @@ public sealed class LinguaRuntimeResources
         // Step 3: invariant culture fallback
         return store.TryGetValue(CultureInfo.InvariantCulture, out dict) ? dict : null;
     }
+
+    /// <summary>
+    /// Enumerates all (culture, value) pairs for a given resource key across
+    /// every culture stored in this instance.
+    /// </summary>
+    /// <param name="key">The resource key to look up.</param>
+    /// <returns>
+    /// Zero or more key-value pairs where the key is the <see cref="CultureInfo"/>
+    /// and the value is the localized string for <paramref name="key"/> in that culture.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="key"/> is <c>null</c>.
+    /// </exception>
+    public IEnumerable<KeyValuePair<CultureInfo, string>> GetAllValuesForKey(string key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+
+        var store = _store;
+        foreach (var (culture, resources) in store)
+        {
+            if (resources.TryGetValue(key, out var value))
+                yield return new KeyValuePair<CultureInfo, string>(culture, value);
+        }
+    }
+
+    /// <summary>
+    /// Removes all runtime-added entries, resetting this instance to an empty state.
+    /// </summary>
+    public void Clear()
+    {
+        lock (_lock)
+        {
+            _store = new Dictionary<CultureInfo, IReadOnlyDictionary<string, string>>();
+        }
+    }
 }

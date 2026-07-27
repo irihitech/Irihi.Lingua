@@ -510,6 +510,8 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         BuildUpdateCultureMethod(sb);
         BuildGetObservableMethod(sb);
         BuildAddResourcesMethod(sb);
+        BuildGetTranslationsMethod(sb);
+        BuildClearRuntimeResourcesMethod(sb);
 
         sb.AppendLine("}");
 
@@ -760,6 +762,44 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    public void AddResources(global::System.Globalization.CultureInfo culture, global::System.Collections.Generic.IReadOnlyDictionary<string, string> resources)");
         sb.AppendLine("        => _lingua_runtime.Add(culture, resources);");
+    }
+
+    /// <summary>Builds the <c>GetTranslations</c> method that implements <c>ILinguaManager</c>.</summary>
+    private static void BuildGetTranslationsMethod(StringBuilder sb)
+    {
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Returns every available translation for the key represented by");
+        sb.AppendLine("    /// <paramref name=\"observable\"/> across all cultures known to this manager.");
+        sb.AppendLine("    /// Runtime-added resources take precedence over compile-time ones.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public global::System.Collections.Generic.IReadOnlyDictionary<global::System.Globalization.CultureInfo, string> GetTranslations(global::Irihi.Lingua.LinguaObservableString observable)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        global::System.ArgumentNullException.ThrowIfNull(observable);");
+        sb.AppendLine();
+        sb.AppendLine("        var result = new global::System.Collections.Generic.Dictionary<global::System.Globalization.CultureInfo, string>();");
+        sb.AppendLine();
+        sb.AppendLine("        // Compile-time resources first …");
+        sb.AppendLine("        foreach (var kv in _lingua_resources.GetAllValuesForKey(observable.Key))");
+        sb.AppendLine("            result[kv.Key] = kv.Value;");
+        sb.AppendLine();
+        sb.AppendLine("        // … then runtime overrides");
+        sb.AppendLine("        foreach (var kv in _lingua_runtime.GetAllValuesForKey(observable.Key))");
+        sb.AppendLine("            result[kv.Key] = kv.Value;");
+        sb.AppendLine();
+        sb.AppendLine("        return result;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    /// <summary>Builds the <c>ClearRuntimeResources</c> method that implements <c>ILinguaManager</c>.</summary>
+    private static void BuildClearRuntimeResourcesMethod(StringBuilder sb)
+    {
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Clears all runtime-added resources, leaving only compile-time entries.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public void ClearRuntimeResources()");
+        sb.AppendLine("        => _lingua_runtime.Clear();");
+        sb.AppendLine();
     }
 
     // -------------------------------------------------------------------------
