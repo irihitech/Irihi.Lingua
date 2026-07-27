@@ -93,6 +93,18 @@ public class LinguaObservable<T> : IObservable<T>
             _observers = _observers.Where(o => !ReferenceEquals(o, observer)).ToArray();
         }
     }
+
+    /// <summary>
+    /// Removes all current subscribers from this observable.
+    /// Useful for resetting state in test or re-initialization scenarios.
+    /// </summary>
+    public void ClearSubscribers()
+    {
+        lock (_lock)
+        {
+            _observers = [];
+        }
+    }
 }
 
 sealed class Subscription<T>(LinguaObservable<T> parent, IObserver<T> observer) : IDisposable

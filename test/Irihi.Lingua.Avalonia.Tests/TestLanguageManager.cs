@@ -7,6 +7,7 @@ public partial class TestLanguageManager
 {
     public void Reset()
     {
+        _cultureChanges.ClearSubscribers();
         ClearRuntimeResources();
         UpdateCulture(CultureInfo.InvariantCulture);
     }
