@@ -89,4 +89,11 @@ public interface ILinguaManager
     /// Thrown when <paramref name="observable"/> is <c>null</c>.
     /// </exception>
     IReadOnlyDictionary<CultureInfo, string> GetTranslations(LinguaObservableString observable);
+
+    /// <summary>
+    /// Clears all runtime-added resources previously added via
+    /// <see cref="AddResources"/>. After calling this method, only
+    /// compile-time (embedded) resources remain.
+    /// </summary>
+    void ClearRuntimeResources();
 }

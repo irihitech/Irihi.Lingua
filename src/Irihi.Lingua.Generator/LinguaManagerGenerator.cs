@@ -511,6 +511,7 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         BuildGetObservableMethod(sb);
         BuildAddResourcesMethod(sb);
         BuildGetTranslationsMethod(sb);
+        BuildClearRuntimeResourcesMethod(sb);
 
         sb.AppendLine("}");
 
@@ -787,6 +788,17 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("        return result;");
         sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    /// <summary>Builds the <c>ClearRuntimeResources</c> method that implements <c>ILinguaManager</c>.</summary>
+    private static void BuildClearRuntimeResourcesMethod(StringBuilder sb)
+    {
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// Clears all runtime-added resources, leaving only compile-time entries.");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public void ClearRuntimeResources()");
+        sb.AppendLine("        => _lingua_runtime.Clear();");
         sb.AppendLine();
     }
 

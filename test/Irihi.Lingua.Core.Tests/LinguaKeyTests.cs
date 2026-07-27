@@ -74,5 +74,6 @@ public class LinguaKeyTests
         public void AddResources(System.Globalization.CultureInfo culture, IReadOnlyDictionary<string, string> resources) { }
         public IReadOnlyDictionary<System.Globalization.CultureInfo, string> GetTranslations(LinguaObservableString observable) =>
             new Dictionary<System.Globalization.CultureInfo, string>();
+        public void ClearRuntimeResources() { }
     }
 }

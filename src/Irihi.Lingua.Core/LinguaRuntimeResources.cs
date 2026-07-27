@@ -146,4 +146,15 @@ public sealed class LinguaRuntimeResources
                 yield return new KeyValuePair<CultureInfo, string>(culture, value);
         }
     }
+
+    /// <summary>
+    /// Removes all runtime-added entries, resetting this instance to an empty state.
+    /// </summary>
+    public void Clear()
+    {
+        lock (_lock)
+        {
+            _store = new Dictionary<CultureInfo, IReadOnlyDictionary<string, string>>();
+        }
+    }
 }
