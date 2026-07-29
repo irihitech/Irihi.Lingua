@@ -266,7 +266,7 @@ xmlns:local="using:YourAppNamespace"
 >
 > ```xml
 > <Application.Styles>
->     <StyleInclude Source="avares://Irihi.Lingua/Themes/Generic.axaml" />
+>     <StyleInclude Source="avares://Irihi.Lingua.Core/Themes/Generic.axaml" />
 > </Application.Styles>
 > ```
 

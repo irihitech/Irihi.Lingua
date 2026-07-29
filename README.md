@@ -269,7 +269,7 @@ It drives one or more `ILinguaManager` instances and exposes a `CultureChanged` 
 >
 > ```xml
 > <Application.Styles>
->     <StyleInclude Source="avares://Irihi.Lingua/Themes/Generic.axaml" />
+>     <StyleInclude Source="avares://Irihi.Lingua.Core/Themes/Generic.axaml" />
 > </Application.Styles>
 > ```
 
