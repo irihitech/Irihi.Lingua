@@ -19,7 +19,7 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Fmt").Format().Arg(3).Arg(10);
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         var single = Assert.Single(received);
         Assert.Equal("Page 3 of 10", single);
@@ -34,7 +34,7 @@ public class LinguaFormatTests
             .Format(LinguaObservableString.FromLiteral("Hello {0}"))
             .Arg("world");
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         var single = Assert.Single(received);
         Assert.Equal("Hello world", single);
@@ -47,7 +47,7 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Name").Format();
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         var single = Assert.Single(received);
         Assert.Equal("Page", single);
@@ -63,7 +63,7 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         page.OnNext(4);
 
@@ -80,7 +80,7 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(99);
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         Assert.Equal("Page 2 of 99", received[0]);
 
@@ -98,7 +98,7 @@ public class LinguaFormatTests
             .Arg(manager.GetObservable("Name")!)
             .Arg(7);
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         Assert.Equal("Page: 7", received[0]);
     }
@@ -113,7 +113,7 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         page.OnNext(6);
 
@@ -129,7 +129,7 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Fmt").Format().Arg((object?)null).Arg(10);
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         Assert.Equal("Page  of 10", received[0]);
     }
@@ -144,7 +144,7 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Fmt").Format().Arg(3).Arg(10);
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         manager.UpdateCulture(new CultureInfo("zh-Hans"));
 
@@ -166,7 +166,7 @@ public class LinguaFormatTests
             .Format(LinguaObservableString.FromLiteral("Value: {0:F1}"))
             .Arg(1.5);
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         manager.UpdateCulture(new CultureInfo("de-DE"));
 
@@ -188,7 +188,7 @@ public class LinguaFormatTests
                 .Arg(1.5);
 
             var received = new List<string?>();
-            formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
             Assert.Equal("Value: 1.5", received[0]);
         }
@@ -209,7 +209,7 @@ public class LinguaFormatTests
             .Arg("arg");
 
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         var single = Assert.Single(received);
         Assert.Equal(string.Empty, single);
@@ -224,7 +224,7 @@ public class LinguaFormatTests
             .Arg("arg");
 
         var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         var single = Assert.Single(received);
         Assert.Equal("{0", single);
@@ -240,7 +240,7 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var received = new List<string?>();
-        var subscription = formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        var subscription = formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         subscription.Dispose();
         page.OnNext(5);
@@ -255,7 +255,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
         var formatted = manager.Keys("Fmt").Format().Arg(1).Arg(2);
 
-        var subscription = formatted.Subscribe(new DelegateObserver<string?>(_ => { }));
+        var subscription = formatted.Build().Subscribe(new DelegateObserver<string?>(_ => { }));
         subscription.Dispose();
         subscription.Dispose();
     }
@@ -271,13 +271,13 @@ public class LinguaFormatTests
 
         var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var first = new List<string?>();
-        var subscription = formatted.Subscribe(new DelegateObserver<string?>(v => first.Add(v)));
+        var subscription = formatted.Build().Subscribe(new DelegateObserver<string?>(v => first.Add(v)));
         subscription.Dispose();
 
         page.OnNext(8);
 
         var second = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => second.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => second.Add(v)));
 
         Assert.Single(first);
         var single = Assert.Single(second);
@@ -293,8 +293,8 @@ public class LinguaFormatTests
         var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var receivedA = new List<string?>();
         var receivedB = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
-        formatted.Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
 
         page.OnNext(2);
 
@@ -313,8 +313,8 @@ public class LinguaFormatTests
         var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var receivedA = new List<string?>();
         var receivedB = new List<string?>();
-        var subA = formatted.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
-        formatted.Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
+        var subA = formatted.Build().Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
 
         subA.Dispose();
         page.OnNext(2);
@@ -326,12 +326,12 @@ public class LinguaFormatTests
     // ── Builder behaviour ────────────────────────────────────────────────────
 
     [Fact]
-    public void FormatBuilder_FrozenAfterFirstSubscription_ThrowsOnFurtherArg()
+    public void FormatBuilder_FrozenAfterBuild_ThrowsOnFurtherArg()
     {
         var manager = CreateManager();
 
         var builder = manager.Keys("Fmt").Format().Arg(1);
-        builder.Subscribe(new DelegateObserver<string?>(_ => { }));
+        builder.Build();
 
         Assert.Throws<InvalidOperationException>(() => builder.Arg(2));
         Assert.Throws<InvalidOperationException>(() =>
@@ -339,18 +339,16 @@ public class LinguaFormatTests
     }
 
     [Fact]
-    public void FormatBuilder_MultipleSubscriptions_ShareOneCombiner()
+    public void FormatBuilder_BuildOnce_StreamSharedByAllSubscribers()
     {
-        // Both subscriptions go through the same lazily-created combiner, so
-        // they observe the same stream.
         var manager = CreateManager();
         var page = new LinguaObservable<int>("page", 1);
 
-        var builder = manager.Keys("Fmt").Format().Arg(page).Arg(10);
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10).Build();
         var receivedA = new List<string?>();
         var receivedB = new List<string?>();
-        builder.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
-        builder.Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
+        formatted.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
+        formatted.Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
 
         page.OnNext(2);
 
@@ -409,7 +407,7 @@ public class LinguaFormatTests
 
         var tasks = Enumerable.Range(0, 8).Select(i => Task.Run(() =>
         {
-            var sub = formatted.Subscribe(new DelegateObserver<string?>(_ => { }));
+            var sub = formatted.Build().Subscribe(new DelegateObserver<string?>(_ => { }));
             page.OnNext(i);
             manager.UpdateCulture(i % 2 == 0 ? Invariant : new CultureInfo("zh-Hans"));
             sub.Dispose();

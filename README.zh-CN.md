@@ -271,7 +271,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
     public IObservable<string?> PageText =>
         LanguageManager.Keys.Page_Template.Format()
             .Arg(this, nameof(Page), () => Page)
-            .Arg(this, nameof(TotalPages), () => TotalPages);
+            .Arg(this, nameof(TotalPages), () => TotalPages)
+            .Build();
 }
 ```
 
@@ -281,7 +282,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
 <TextBlock Text="{Binding PageText^}" />
 ```
 
-构建器本身就是 `IObservable<string?>` —— 不需要终结方法。它具有 BehaviorSubject 语义：订阅时立即发出当前格式化结果，之后在以下任一情况发生时重新发出：格式模板变化（例如切换了文化）、任一活参数变化，或（自定义模板源时）manager 的当前文化变化。格式化始终使用 manager 的 `CurrentCulture`（而非线程 culture），因此即使模板文本回退到默认文化，数字和日期的格式也与所选语言保持一致。
+`Build()` 把链合成为最终的 `IObservable<string?>`。合成后的可观察对象具有 BehaviorSubject 语义：订阅时立即发出当前格式化结果，之后在以下任一情况发生时重新发出：格式模板变化（例如切换了文化）、任一活参数变化，或（自定义模板源时）manager 的当前文化变化。格式化始终使用 manager 的 `CurrentCulture`（而非线程 culture），因此即使模板文本回退到默认文化，数字和日期的格式也与所选语言保持一致。
 
 `Arg` 有三个重载，对应三种参数：
 
@@ -293,7 +294,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
 ```csharp
 manager.Format(LinguaObservableString.FromLiteral("Page {0} of {1}"))
-    .Arg(this, nameof(Page), () => Page);
+    .Arg(this, nameof(Page), () => Page)
+    .Build();
 ```
 
 Avalonia 属性通过 `GetObservable` 加入链式调用——`StyledProperty` 和 `DirectProperty` 都支持：
@@ -301,7 +303,8 @@ Avalonia 属性通过 `GetObservable` 加入链式调用——`StyledProperty` �
 ```csharp
 // TextBox.Text 是 DirectProperty；自定义控件自己的 DirectProperty 用法相同
 LanguageManager.Keys.Page_Template.Format()
-    .Arg(textBox.GetObservable(TextBox.TextProperty));
+    .Arg(textBox.GetObservable(TextBox.TextProperty))
+    .Build();
 ```
 
 demo 中的 `ProgressLabel` 控件是一个完整示例：它注册了自己的 `Progress` DirectProperty 并用本地化模板格式化，在挂载时订阅、卸载时释放。

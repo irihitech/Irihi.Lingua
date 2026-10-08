@@ -96,7 +96,8 @@ public partial class MainWindowViewModel : ObservableObject
     public IObservable<string?> PageText =>
         LanguageManager.Keys.Page_Template.Format()
             .Arg(this, nameof(Page), () => Page)
-            .Arg(this, nameof(TotalPages), () => TotalPages);
+            .Arg(this, nameof(TotalPages), () => TotalPages)
+            .Build();
 
     // ── Helper ───────────────────────────────────────────────────────────────
 

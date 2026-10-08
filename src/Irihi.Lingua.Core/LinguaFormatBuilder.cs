@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace Irihi.Lingua;
 
 /// <summary>
@@ -9,36 +11,37 @@ namespace Irihi.Lingua;
 /// <para>
 /// Create a builder with <see cref="LinguaFormatExtensions.Format(LinguaKey)"/>
 /// (or the manager overload for a custom template source), add arguments with
-/// the <see cref="Arg(object?)"/> overloads, and subscribe directly: the
-/// builder itself implements <see cref="IObservable{T}"/>, so no terminal
-/// method is needed.
+/// the <see cref="Arg(object?)"/> overloads, and finish the chain with
+/// <see cref="Build"/>, which composes the final
+/// <see cref="IObservable{T}"/> of string.
 /// </para>
 /// <example>
 /// <code>
 /// public IObservable&lt;string?&gt; PageText =&gt;
 ///     LanguageManager.Keys.Page_Template.Format()
 ///         .Arg(this, nameof(Page), () =&gt; Page)
-///         .Arg(this, nameof(TotalPages), () =&gt; TotalPages);
+///         .Arg(this, nameof(TotalPages), () =&gt; TotalPages)
+///         .Build();
 /// </code>
 /// </example>
 /// <para>
-/// The builder behaves like a behavior subject: subscribing immediately emits
-/// the formatted result computed from the current values, and every subsequent
-/// change re-emits a recomputed string.  A recompute is triggered whenever the
-/// format template changes (e.g. because the active culture changed), whenever
-/// one of the dynamic arguments changes, and — for custom template sources —
-/// whenever the manager's active culture changes.  Formatting always uses the
-/// owning manager's <see cref="ILinguaManager.CurrentCulture"/> rather than
-/// the thread culture, so numbers and dates stay consistent with the selected
-/// language.
+/// The built observable behaves like a behavior subject: subscribing
+/// immediately emits the formatted result computed from the current values,
+/// and every subsequent change re-emits a recomputed string.  A recompute is
+/// triggered whenever the format template changes (e.g. because the active
+/// culture changed), whenever one of the dynamic arguments changes, and — for
+/// custom template sources — whenever the manager's active culture changes.
+/// Formatting always uses the owning manager's
+/// <see cref="ILinguaManager.CurrentCulture"/> rather than the thread culture,
+/// so numbers and dates stay consistent with the selected language.
 /// </para>
 /// <para>
-/// The underlying combiner is created lazily on the first subscription and
-/// shared by all subscribers; from that point on the builder is frozen and
-/// further <c>Arg</c> calls throw.
+/// The builder is frozen by the first <see cref="Build"/> call; further
+/// <c>Arg</c> calls throw.  <see cref="Build"/> may be called repeatedly, each
+/// time producing an independent observable with the frozen arguments.
 /// </para>
 /// </remarks>
-public sealed class LinguaFormatBuilder : IObservable<string?>
+public sealed class LinguaFormatBuilder
 {
     private readonly ILinguaManager _manager;
     private readonly IObservable<string?> _format;
@@ -47,14 +50,7 @@ public sealed class LinguaFormatBuilder : IObservable<string?>
     private readonly List<(Func<IObserver<object?>, IDisposable> Subscribe, int Index)> _sources = [];
     private readonly List<(PropertyChange Change, int Index)> _properties = [];
 
-#if NET9_0_OR_GREATER
-    private readonly Lock _gate = new();
-#else
-    private readonly object _gate = new();
-#endif
-
-    private LinguaFormatObservable? _combiner;
-    private bool _frozen;
+    private bool _built;
 
     internal LinguaFormatBuilder(
         ILinguaManager manager,
@@ -72,7 +68,7 @@ public sealed class LinguaFormatBuilder : IObservable<string?>
     /// <param name="value">The constant value (boxed as-is; <c>null</c> is allowed).</param>
     public LinguaFormatBuilder Arg(object? value)
     {
-        ThrowIfFrozen();
+        ThrowIfBuilt();
         _slots.Add(value);
         return this;
     }
@@ -87,7 +83,7 @@ public sealed class LinguaFormatBuilder : IObservable<string?>
     public LinguaFormatBuilder Arg<T>(IObservable<T> observable)
     {
         ArgumentNullException.ThrowIfNull(observable);
-        ThrowIfFrozen();
+        ThrowIfBuilt();
 
         _slots.Add(null);
         _sources.Add((observer => observable.Subscribe(new BoxingObserver<T>(observer)), _slots.Count - 1));
@@ -95,9 +91,9 @@ public sealed class LinguaFormatBuilder : IObservable<string?>
     }
 
     /// <summary>
-    /// Adds a live property argument: the combiner subscribes the source's
-    /// <see cref="System.ComponentModel.INotifyPropertyChanged.PropertyChanged"/>
-    /// event directly and re-reads the property on every matching notification.
+    /// Adds a live property argument: the built observable subscribes the
+    /// source's <see cref="INotifyPropertyChanged.PropertyChanged"/> event
+    /// directly and re-reads the property on every matching notification.
     /// </summary>
     /// <remarks>
     /// The property is read through <paramref name="getter"/> instead of
@@ -111,12 +107,12 @@ public sealed class LinguaFormatBuilder : IObservable<string?>
     /// <param name="propertyName">The name of the property to observe (e.g. <c>nameof(Page)</c>).</param>
     /// <param name="getter">A delegate that reads the current value of the property.</param>
     public LinguaFormatBuilder Arg(
-        System.ComponentModel.INotifyPropertyChanged source,
+        INotifyPropertyChanged source,
         string propertyName,
         Func<object?> getter)
     {
         var change = new PropertyChange(source, propertyName, getter);
-        ThrowIfFrozen();
+        ThrowIfBuilt();
 
         _slots.Add(null);
         _properties.Add((change, _slots.Count - 1));
@@ -124,35 +120,26 @@ public sealed class LinguaFormatBuilder : IObservable<string?>
     }
 
     /// <summary>
-    /// Subscribes an observer.  The underlying combiner is created lazily on
-    /// the first subscription and shared by all subscribers; the observer
-    /// immediately receives the formatted result computed from the current
-    /// values, then every recomputed value.
+    /// Composes the chain into the final observable string.  The builder is
+    /// frozen by this call; <see cref="Build"/> may be called repeatedly, each
+    /// time producing an independent observable.
     /// </summary>
-    public IDisposable Subscribe(IObserver<string?> observer)
+    public IObservable<string?> Build()
     {
-        ArgumentNullException.ThrowIfNull(observer);
-
-        LinguaFormatObservable combiner;
-        lock (_gate)
-        {
-            _frozen = true;
-            combiner = _combiner ??= new LinguaFormatObservable(
-                _manager,
-                _format,
-                _subscribeCultureChanges,
-                [.. _slots],
-                [.. _sources],
-                [.. _properties]);
-        }
-
-        return combiner.Subscribe(observer);
+        _built = true;
+        return new LinguaFormatObservable(
+            _manager,
+            _format,
+            _subscribeCultureChanges,
+            [.. _slots],
+            [.. _sources],
+            [.. _properties]);
     }
 
-    private void ThrowIfFrozen()
+    private void ThrowIfBuilt()
     {
-        if (_frozen)
+        if (_built)
             throw new InvalidOperationException(
-                "The format builder has already been subscribed and can no longer be modified.");
+                "The format builder has already been built and can no longer be modified.");
     }
 }

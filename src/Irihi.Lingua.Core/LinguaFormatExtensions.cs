@@ -28,7 +28,8 @@ public static class LinguaFormatExtensions
     /// public IObservable&lt;string?&gt; PageText =&gt;
     ///     LanguageManager.Keys.Page_Template.Format()
     ///         .Arg(this, nameof(Page), () =&gt; Page)
-    ///         .Arg(this, nameof(TotalPages), () =&gt; TotalPages);
+    ///         .Arg(this, nameof(TotalPages), () =&gt; TotalPages)
+    ///         .Build();
     /// </code>
     /// </example>
     /// <exception cref="ArgumentNullException">

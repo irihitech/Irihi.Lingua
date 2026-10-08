@@ -35,7 +35,7 @@ public class ProgressLabel : TextBlock
         // change) — it plugs straight into the Arg overload.
         _subscription = LanguageManager.Keys.Progress_Template.Format()
             .Arg(this.GetObservable(ProgressProperty))
-            .Subscribe(new DelegateObserver<string?>(v => Text = v));
+            .Build().Subscribe(new DelegateObserver<string?>(v => Text = v));
     }
 
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)

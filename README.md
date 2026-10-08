@@ -273,7 +273,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
     public IObservable<string?> PageText =>
         LanguageManager.Keys.Page_Template.Format()
             .Arg(this, nameof(Page), () => Page)
-            .Arg(this, nameof(TotalPages), () => TotalPages);
+            .Arg(this, nameof(TotalPages), () => TotalPages)
+            .Build();
 }
 ```
 
@@ -283,7 +284,7 @@ Bind it in XAML like any other Lingua observable:
 <TextBlock Text="{Binding PageText^}" />
 ```
 
-The builder itself is the `IObservable<string?>` — no terminal method is needed. It behaves like a behavior subject: subscribing immediately emits the current formatted string, and every subsequent change re-emits a recomputed value — whenever the format template changes (e.g. because the active culture changed), whenever a live argument changes, or (for custom template sources) whenever the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
+`Build()` composes the chain into the final `IObservable<string?>`. The built observable behaves like a behavior subject: subscribing immediately emits the current formatted string, and every subsequent change re-emits a recomputed value — whenever the format template changes (e.g. because the active culture changed), whenever a live argument changes, or (for custom template sources) whenever the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
 
 `Arg` has three overloads, one per argument kind:
 
@@ -295,7 +296,8 @@ For a custom template source, start the chain from the manager instead:
 
 ```csharp
 manager.Format(LinguaObservableString.FromLiteral("Page {0} of {1}"))
-    .Arg(this, nameof(Page), () => Page);
+    .Arg(this, nameof(Page), () => Page)
+    .Build();
 ```
 
 Avalonia properties join the chain through `GetObservable`, which returns the property's observable for both `StyledProperty`s and `DirectProperty`s:
@@ -303,7 +305,8 @@ Avalonia properties join the chain through `GetObservable`, which returns the pr
 ```csharp
 // TextBox.Text is a DirectProperty; a custom control's own DirectProperty works the same way
 LanguageManager.Keys.Page_Template.Format()
-    .Arg(textBox.GetObservable(TextBox.TextProperty));
+    .Arg(textBox.GetObservable(TextBox.TextProperty))
+    .Build();
 ```
 
 See the demo's `ProgressLabel` control for a self-contained example: it registers its own `Progress` DirectProperty and formats it against a localized template, subscribing on attach and disposing on detach.

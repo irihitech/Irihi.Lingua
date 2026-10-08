@@ -22,7 +22,7 @@ public class PropertyChangeTests
         manager.Keys("Fmt").Format()
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(10)
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         var single = Assert.Single(received);
         Assert.Equal("Page 3 of 10", single);
@@ -38,7 +38,7 @@ public class PropertyChangeTests
         manager.Keys("Fmt").Format()
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(model, nameof(TestModel.TotalPages), () => model.TotalPages)
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 4;
         model.TotalPages = 20;
@@ -61,7 +61,7 @@ public class PropertyChangeTests
         manager.Keys("Fmt").Format()
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(10)
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Name = "unrelated";
 
@@ -78,7 +78,7 @@ public class PropertyChangeTests
         manager.Keys("Fmt").Format()
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(10)
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 2;       // normal raise
         model.Raise(null);    // "everything changed" raise
@@ -97,7 +97,7 @@ public class PropertyChangeTests
         manager.Keys("Fmt").Format()
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(10)
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 1; // setter raises even though the value is the same
 
@@ -114,7 +114,7 @@ public class PropertyChangeTests
         var received = new List<string?>();
         manager.Keys("Fmt").Format()
             .Arg(model, nameof(TestModel.Name), () => model.Name)
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Name = "xyz";
 
@@ -133,7 +133,7 @@ public class PropertyChangeTests
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(10);
         var received = new List<string?>();
-        var subscription = formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        var subscription = formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         subscription.Dispose();
         model.Page = 9;
@@ -151,13 +151,13 @@ public class PropertyChangeTests
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(10);
         var first = new List<string?>();
-        var subscription = formatted.Subscribe(new DelegateObserver<string?>(v => first.Add(v)));
+        var subscription = formatted.Build().Subscribe(new DelegateObserver<string?>(v => first.Add(v)));
         subscription.Dispose();
 
         model.Page = 7; // nobody listening
 
         var second = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => second.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => second.Add(v)));
         model.Page = 8;
 
         Assert.Single(first);
@@ -175,8 +175,8 @@ public class PropertyChangeTests
             .Arg(10);
         var receivedA = new List<string?>();
         var receivedB = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
-        formatted.Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
+        formatted.Build().Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
 
         model.Page = 2;
 
@@ -197,7 +197,7 @@ public class PropertyChangeTests
         manager.Keys("Fmt").Format()
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(extra)
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 3;
         extra.OnNext(6);
@@ -222,7 +222,7 @@ public class PropertyChangeTests
         manager.Keys("Fmt").Format()
             .Arg(model, nameof(TestModel.Page), () => model.Page)
             .Arg(model, nameof(TestModel.TotalPages), () => model.TotalPages)
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 4;
         manager.UpdateCulture(new CultureInfo("zh-Hans"));

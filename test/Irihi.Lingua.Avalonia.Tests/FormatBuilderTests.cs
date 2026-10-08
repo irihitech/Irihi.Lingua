@@ -22,7 +22,7 @@ public class FormatBuilderTests
         TestLanguageManager.Keys.Format_Template.Format()
             .Arg(TestLanguageManager.Instance.Greeting_Message)
             .Arg(spinner.GetObservable(TestSpinner.ValueProperty))
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         Assert.Equal("Hello, Page 1.5", received[0]);
 
@@ -48,7 +48,7 @@ public class FormatBuilderTests
         TestLanguageManager.Keys.Format_Template.Format()
             .Arg(TestLanguageManager.Instance.Greeting_Message)
             .Arg(numeric.GetObservable(NumericUpDown.ValueProperty))
-            .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         Assert.Equal("Hello, Page 3", received[0]);
 
