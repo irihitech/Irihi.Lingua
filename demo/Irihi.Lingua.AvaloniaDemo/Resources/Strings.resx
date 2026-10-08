@@ -12,7 +12,4 @@
   <data name="Page_Template" xml:space="preserve">
     <value>Page {0} of {1}</value>
   </data>
-  <data name="Progress_Template" xml:space="preserve">
-    <value>Progress: {0:F0}%</value>
-  </data>
 </root>

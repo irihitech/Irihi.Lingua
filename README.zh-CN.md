@@ -309,8 +309,6 @@ LanguageManager.Keys.Page_Template.CreateFormat()
     .Build();
 ```
 
-demo 中的 `ProgressLabel` 控件是一个完整示例：它注册了自己的 `Progress` DirectProperty 并用本地化模板格式化，在挂载时订阅、卸载时释放。
-
 ### CulturePicker — 内置文化切换控件
 
 `CulturePicker` 是一个 `TemplatedControl`，提供开箱即用的 `ComboBox` 用于切换文化。

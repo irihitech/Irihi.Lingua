@@ -311,8 +311,6 @@ LanguageManager.Keys.Page_Template.CreateFormat()
     .Build();
 ```
 
-See the demo's `ProgressLabel` control for a self-contained example: it registers its own `Progress` DirectProperty and formats it against a localized template, subscribing on attach and disposing on detach.
-
 ### CulturePicker — built-in culture switcher
 
 `CulturePicker` is a `TemplatedControl` that provides a ready-to-use `ComboBox` for switching cultures.
