@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Globalization;
 using Xunit;
 
@@ -461,6 +462,69 @@ public class LinguaFormatTests
         var manager = CreateManager();
         Assert.Throws<ArgumentNullException>(() =>
             manager.Keys("Fmt").CreateFormat().Arg((Func<int>)null!));
+    }
+
+    // ── Memory-leak guards ───────────────────────────────────────────────────
+    //
+    // The build/subscribe/dispose sequence lives in a [NoInlining] helper so
+    // no local (and no xunit state-machine field promotion) keeps the combiner
+    // alive; only the WeakReference crosses back to the test method.
+
+    [Fact]
+    public void Format_AfterFullUnsubscribe_CombinerIsCollectable()
+    {
+        // Covers the format-template subscription and observable-arg
+        // subscriptions: once the last subscriber disposes, no source holds
+        // the combiner and the whole graph must be collectable.
+        var weak = BuildSubscribeAndDispose(CreateManager());
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.False(weak.IsAlive);
+    }
+
+    [Fact]
+    public void Format_AfterFullUnsubscribe_CultureSubscriptionAndPropertyEventAreUnwired()
+    {
+        // Covers the CultureChanges subscription (custom-template entry) and
+        // the PropertyChanged wiring: both must be released when the last
+        // subscriber disposes, or the manager/source would root the combiner.
+        var weak = BuildSubscribeAndDisposeWithProperty(CreateManager());
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.False(weak.IsAlive);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference BuildSubscribeAndDispose(FakeLinguaManager manager)
+    {
+        var page = new LinguaObservable<int>("page", 1);
+        var formatted = manager.Keys("Fmt").CreateFormat().Arg(page).Arg(10).Build();
+        var weak = new WeakReference(formatted);
+
+        formatted.Subscribe(new DelegateObserver<string?>(_ => { })).Dispose();
+
+        return weak;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference BuildSubscribeAndDisposeWithProperty(FakeLinguaManager manager)
+    {
+        var model = new SilentModel { Value = 1 };
+        var formatted = manager.CreateFormat("Page {0} of {1}")
+            .Arg(model, nameof(SilentModel.Value), s => s.Value)
+            .Arg(10)
+            .Build();
+        var weak = new WeakReference(formatted);
+
+        formatted.Subscribe(new DelegateObserver<string?>(_ => { })).Dispose();
+
+        return weak;
     }
 
     // ── Argument validation ──────────────────────────────────────────────────
