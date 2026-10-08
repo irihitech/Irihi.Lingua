@@ -47,6 +47,121 @@ public class LinguaRuntimeResourcesTests
         Assert.Equal("3", result["C"]);
     }
 
+    // ── AddRange ─────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AddRange_MultipleCultures_AddsAllEntries()
+    {
+        var store = new LinguaRuntimeResources();
+        var en = new CultureInfo("en");
+        var ja = new CultureInfo("ja");
+
+        store.AddRange(
+            new KeyValuePair<CultureInfo, IReadOnlyDictionary<string, string>>(
+                en, new Dictionary<string, string> { ["Title"] = "Hello" }),
+            new KeyValuePair<CultureInfo, IReadOnlyDictionary<string, string>>(
+                ja, new Dictionary<string, string> { ["Title"] = "こんにちは" }),
+            new KeyValuePair<CultureInfo, IReadOnlyDictionary<string, string>>(
+                CultureInfo.InvariantCulture, new Dictionary<string, string> { ["Title"] = "Default" }));
+
+        Assert.Equal("Hello", store.Resolve(new CultureInfo("en-US"))!["Title"]);
+        Assert.Equal("こんにちは", store.Resolve(new CultureInfo("ja-JP"))!["Title"]);
+        Assert.Equal("Default", store.Resolve(new CultureInfo("de-DE"))!["Title"]);
+        Assert.Equal(3, store.GetAllValuesForKey("Title").Count());
+    }
+
+    [Fact]
+    public void AddRange_ExistingAndRepeatedCulture_MergesEntriesInOrder()
+    {
+        var store = new LinguaRuntimeResources();
+        var en = new CultureInfo("en");
+        store.Add(en, new Dictionary<string, string> { ["A"] = "1", ["B"] = "original" });
+
+        store.AddRange([
+            new(en, new Dictionary<string, string> { ["B"] = "first", ["C"] = "3" }),
+            new(new CultureInfo("en"), new Dictionary<string, string> { ["B"] = "last", ["D"] = "4" })
+        ]);
+
+        var result = store.Resolve(en)!;
+        Assert.Equal(4, result.Count);
+        Assert.Equal("1", result["A"]);
+        Assert.Equal("last", result["B"]);
+        Assert.Equal("3", result["C"]);
+        Assert.Equal("4", result["D"]);
+    }
+
+    [Fact]
+    public void AddRange_CopiesInputDictionaries()
+    {
+        var store = new LinguaRuntimeResources();
+        var en = new CultureInfo("en");
+        var resources = new Dictionary<string, string> { ["K"] = "original" };
+
+        store.AddRange([new(en, resources)]);
+        resources["K"] = "changed";
+        resources["New"] = "value";
+
+        var result = store.Resolve(en)!;
+        Assert.Equal("original", result["K"]);
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public void AddRange_DoesNotMutateExistingSnapshot()
+    {
+        var store = new LinguaRuntimeResources();
+        var en = new CultureInfo("en");
+        store.Add(en, new Dictionary<string, string> { ["K"] = "original" });
+        var snapshot = store.Resolve(en)!;
+
+        store.AddRange([
+            new(en, new Dictionary<string, string> { ["K"] = "first" }),
+            new(en, new Dictionary<string, string> { ["K"] = "last", ["New"] = "value" })
+        ]);
+
+        Assert.Equal("original", snapshot["K"]);
+        Assert.Single(snapshot);
+        Assert.Equal("last", store.Resolve(en)!["K"]);
+    }
+
+    [Fact]
+    public void AddRange_EmptySpan_LeavesStoreUnchanged()
+    {
+        var store = new LinguaRuntimeResources();
+        store.AddRange();
+        Assert.Null(store.Resolve(CultureInfo.InvariantCulture));
+
+        var en = new CultureInfo("en");
+        store.Add(en, new Dictionary<string, string> { ["K"] = "original" });
+        var snapshot = store.Resolve(en);
+
+        store.AddRange(ReadOnlySpan<KeyValuePair<CultureInfo, IReadOnlyDictionary<string, string>>>.Empty);
+
+        Assert.Same(snapshot, store.Resolve(en));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AddRange_NullEntry_ThrowsWithoutPublishingBatch(bool nullCulture)
+    {
+        var store = new LinguaRuntimeResources();
+        var en = new CultureInfo("en");
+        var ja = new CultureInfo("ja");
+        store.Add(en, new Dictionary<string, string> { ["K"] = "original" });
+        var snapshot = store.Resolve(en);
+
+        Assert.Throws<ArgumentNullException>(() => store.AddRange([
+            new(en, new Dictionary<string, string> { ["K"] = "changed" }),
+            new(ja, new Dictionary<string, string> { ["K"] = "new" }),
+            new(nullCulture ? null! : en, nullCulture ? new Dictionary<string, string>() : null!)
+        ]));
+
+        Assert.Same(snapshot, store.Resolve(en));
+        Assert.Equal("original", store.Resolve(en)!["K"]);
+        Assert.Null(store.Resolve(ja));
+    }
+
     // ── Resolve ──────────────────────────────────────────────────────────────
 
     [Fact]

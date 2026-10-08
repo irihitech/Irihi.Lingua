@@ -45,25 +45,50 @@ public sealed class LinguaRuntimeResources
     /// Thrown when <paramref name="culture"/> or <paramref name="resources"/> is <c>null</c>.
     /// </exception>
     public void Add(CultureInfo culture, IReadOnlyDictionary<string, string> resources)
+        => AddRange([new(culture, resources)]);
+
+    /// <summary>
+    /// Adds or updates resource entries for multiple cultures in a single atomic operation.
+    /// </summary>
+    /// <remarks>
+    /// Entries are merged in order, with later entries overwriting existing keys.
+    /// The store is copied and published only once for the entire batch.
+    /// Pass <see cref="CultureInfo.InvariantCulture"/> to target the
+    /// invariant / fallback culture.
+    /// </remarks>
+    /// <param name="entries">
+    /// The culture/resource pairs to add. Neither cultures nor resource dictionaries may be <c>null</c>.
+    /// An empty span leaves the store unchanged.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when a culture or resource dictionary in <paramref name="entries"/> is <c>null</c>.
+    /// </exception>
+    public void AddRange(params ReadOnlySpan<KeyValuePair<CultureInfo, IReadOnlyDictionary<string, string>>> entries)
     {
-        ArgumentNullException.ThrowIfNull(culture);
-        ArgumentNullException.ThrowIfNull(resources);
+        if (entries.IsEmpty)
+            return;
 
         lock (_lock)
         {
             var newStore = new Dictionary<CultureInfo, IReadOnlyDictionary<string, string>>(_store);
 
-            if (newStore.TryGetValue(culture, out var existing))
+            foreach (var (culture, resources) in entries)
             {
-                var merged = new Dictionary<string, string>(existing);
-                foreach (var kv in resources)
-                    merged[kv.Key] = kv.Value;
+                ArgumentNullException.ThrowIfNull(culture);
+                ArgumentNullException.ThrowIfNull(resources);
 
-                newStore[culture] = merged;
-            }
-            else
-            {
-                newStore[culture] = new Dictionary<string, string>(resources);
+                if (newStore.TryGetValue(culture, out var existing))
+                {
+                    var merged = new Dictionary<string, string>(existing);
+                    foreach (var kv in resources)
+                        merged[kv.Key] = kv.Value;
+
+                    newStore[culture] = merged;
+                }
+                else
+                {
+                    newStore[culture] = new Dictionary<string, string>(resources);
+                }
             }
 
             _store = newStore;
