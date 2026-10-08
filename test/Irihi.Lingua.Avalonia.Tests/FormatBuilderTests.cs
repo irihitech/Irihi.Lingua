@@ -19,7 +19,7 @@ public class FormatBuilderTests
 
         var spinner = new TestSpinner { Value = 1.5 };
         var received = new List<string?>();
-        TestLanguageManager.Keys.Format_Template.Format()
+        TestLanguageManager.Keys.Format_Template.CreateFormat()
             .Arg(TestLanguageManager.Instance.Greeting_Message)
             .Arg(spinner.GetObservable(TestSpinner.ValueProperty))
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -45,7 +45,7 @@ public class FormatBuilderTests
         // NumericUpDown.Value is a StyledProperty.
         var numeric = new NumericUpDown { Value = 3m };
         var received = new List<string?>();
-        TestLanguageManager.Keys.Format_Template.Format()
+        TestLanguageManager.Keys.Format_Template.CreateFormat()
             .Arg(TestLanguageManager.Instance.Greeting_Message)
             .Arg(numeric.GetObservable(NumericUpDown.ValueProperty))
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));

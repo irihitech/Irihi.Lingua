@@ -271,7 +271,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
     // Page and TotalPages raise PropertyChanged ...
 
     public IObservable<string?> PageText =>
-        LanguageManager.Keys.Page_Template.Format()
+        LanguageManager.Keys.Page_Template.CreateFormat()
             .Arg(this, nameof(Page), s => s.Page)
             .Arg(this, nameof(TotalPages), s => s.TotalPages)
             .Build();
@@ -300,13 +300,13 @@ LinguaManager.Instance.CreateFormat("Page {0} of {1}")
     .Build();
 ```
 
-`CreateFormat` also accepts an `IObservable<string?>` template source (e.g. `LinguaObservableString.FromLiteral` or a template composed at runtime). For templates that come from the manager's own resources, prefer `Keys.X.Format()` — it avoids a redundant culture subscription.
+`CreateFormat` also accepts an `IObservable<string?>` template source (e.g. `LinguaObservableString.FromLiteral` or a template composed at runtime). For templates that come from the manager's own resources, prefer `Keys.X.CreateFormat()` — it avoids a redundant culture subscription.
 
 Avalonia properties join the chain through `GetObservable`, which returns the property's observable for both `StyledProperty`s and `DirectProperty`s:
 
 ```csharp
 // TextBox.Text is a DirectProperty; a custom control's own DirectProperty works the same way
-LanguageManager.Keys.Page_Template.Format()
+LanguageManager.Keys.Page_Template.CreateFormat()
     .Arg(textBox.GetObservable(TextBox.TextProperty))
     .Build();
 ```

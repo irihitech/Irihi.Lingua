@@ -9,7 +9,7 @@ namespace Irihi.Lingua;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Create a builder with <see cref="LinguaFormatExtensions.Format(LinguaKey)"/>
+/// Create a builder with <see cref="LinguaFormatExtensions.CreateFormat(LinguaKey)"/>
 /// (or <see cref="LinguaFormatExtensions.CreateFormat(ILinguaManager, IObservable{string?})"/>
 /// for a custom template source), add arguments with
 /// the <see cref="Arg(object?)"/> overloads, and finish the chain with
@@ -19,7 +19,7 @@ namespace Irihi.Lingua;
 /// <example>
 /// <code>
 /// public IObservable&lt;string?&gt; PageText =&gt;
-///     LanguageManager.Keys.Page_Template.Format()
+///     LanguageManager.Keys.Page_Template.CreateFormat()
 ///         .Arg(this, nameof(Page), s =&gt; s.Page)
 ///         .Arg(this, nameof(TotalPages), s =&gt; s.TotalPages)
 ///         .Build();

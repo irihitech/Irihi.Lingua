@@ -19,7 +19,7 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 3, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt").Format()
+        manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(10)
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -35,7 +35,7 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt").Format()
+        manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(model, nameof(TestModel.TotalPages), s => s.TotalPages)
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -58,7 +58,7 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt").Format()
+        manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(10)
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -75,7 +75,7 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt").Format()
+        manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(10)
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -94,7 +94,7 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt").Format()
+        manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(10)
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -112,7 +112,7 @@ public class PropertyChangeTests
         var model = new TestModel { Name = "abc" };
 
         var received = new List<string?>();
-        manager.Keys("Fmt").Format()
+        manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Name), s => s.Name)
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -129,7 +129,7 @@ public class PropertyChangeTests
         var manager = CreateManager();
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
-        var formatted = manager.Keys("Fmt").Format()
+        var formatted = manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(10);
         var received = new List<string?>();
@@ -147,7 +147,7 @@ public class PropertyChangeTests
         var manager = CreateManager();
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
-        var formatted = manager.Keys("Fmt").Format()
+        var formatted = manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(10);
         var first = new List<string?>();
@@ -170,7 +170,7 @@ public class PropertyChangeTests
         var manager = CreateManager();
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
-        var formatted = manager.Keys("Fmt").Format()
+        var formatted = manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(10);
         var receivedA = new List<string?>();
@@ -194,7 +194,7 @@ public class PropertyChangeTests
         var extra = new LinguaObservable<int>("extra", 5);
 
         var received = new List<string?>();
-        manager.Keys("Fmt").Format()
+        manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(extra)
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -219,7 +219,7 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt").Format()
+        manager.Keys("Fmt").CreateFormat()
             .Arg(model, nameof(TestModel.Page), s => s.Page)
             .Arg(model, nameof(TestModel.TotalPages), s => s.TotalPages)
             .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -244,7 +244,7 @@ public class PropertyChangeTests
     {
         var manager = CreateManager();
         Assert.Throws<ArgumentNullException>(() =>
-            manager.Keys("Fmt").Format().Arg<TestModel>(null!, nameof(TestModel.Page), s => s.Page));
+            manager.Keys("Fmt").CreateFormat().Arg<TestModel>(null!, nameof(TestModel.Page), s => s.Page));
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public class PropertyChangeTests
         var manager = CreateManager();
         var model = new TestModel();
         Assert.Throws<ArgumentException>(() =>
-            manager.Keys("Fmt").Format().Arg(model, "", s => s.Page));
+            manager.Keys("Fmt").CreateFormat().Arg(model, "", s => s.Page));
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public class PropertyChangeTests
         var manager = CreateManager();
         var model = new TestModel();
         Assert.Throws<ArgumentNullException>(() =>
-            manager.Keys("Fmt").Format().Arg(model, nameof(TestModel.Page), null!));
+            manager.Keys("Fmt").CreateFormat().Arg(model, nameof(TestModel.Page), null!));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

@@ -269,7 +269,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
     // Page 与 TotalPages 会触发 PropertyChanged ...
 
     public IObservable<string?> PageText =>
-        LanguageManager.Keys.Page_Template.Format()
+        LanguageManager.Keys.Page_Template.CreateFormat()
             .Arg(this, nameof(Page), s => s.Page)
             .Arg(this, nameof(TotalPages), s => s.TotalPages)
             .Build();
@@ -298,13 +298,13 @@ LinguaManager.Instance.CreateFormat("Page {0} of {1}")
     .Build();
 ```
 
-`CreateFormat` 也接受 `IObservable<string?>` 模板源（如 `LinguaObservableString.FromLiteral` 或运行时组合的模板）。模板来自 manager 自身资源时，优先用 `Keys.X.Format()`——它避免了一次冗余的 culture 订阅。
+`CreateFormat` 也接受 `IObservable<string?>` 模板源（如 `LinguaObservableString.FromLiteral` 或运行时组合的模板）。模板来自 manager 自身资源时，优先用 `Keys.X.CreateFormat()`——它避免了一次冗余的 culture 订阅。
 
 Avalonia 属性通过 `GetObservable` 加入链式调用——`StyledProperty` 和 `DirectProperty` 都支持：
 
 ```csharp
 // TextBox.Text 是 DirectProperty；自定义控件自己的 DirectProperty 用法相同
-LanguageManager.Keys.Page_Template.Format()
+LanguageManager.Keys.Page_Template.CreateFormat()
     .Arg(textBox.GetObservable(TextBox.TextProperty))
     .Build();
 ```

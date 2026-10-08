@@ -26,7 +26,7 @@ public static class LinguaFormatExtensions
     /// <example>
     /// <code>
     /// public IObservable&lt;string?&gt; PageText =&gt;
-    ///     LanguageManager.Keys.Page_Template.Format()
+    ///     LanguageManager.Keys.Page_Template.CreateFormat()
     ///         .Arg(this, nameof(Page), s =&gt; s.Page)
     ///         .Arg(this, nameof(TotalPages), s =&gt; s.TotalPages)
     ///         .Build();
@@ -39,7 +39,7 @@ public static class LinguaFormatExtensions
     /// Thrown when the manager of <paramref name="formatKey"/> does not contain
     /// an observable for the key.
     /// </exception>
-    public static LinguaFormatBuilder Format(this LinguaKey formatKey)
+    public static LinguaFormatBuilder CreateFormat(this LinguaKey formatKey)
     {
         ArgumentNullException.ThrowIfNull(formatKey);
 
@@ -70,7 +70,7 @@ public static class LinguaFormatExtensions
     /// </param>
     /// <remarks>
     /// For templates that come from the manager's own resources, prefer
-    /// <see cref="Format(LinguaKey)"/> — it starts from the template key and
+    /// <see cref="CreateFormat(LinguaKey)"/> — it starts from the template key and
     /// avoids a redundant culture subscription.
     /// </remarks>
     /// <exception cref="ArgumentNullException">

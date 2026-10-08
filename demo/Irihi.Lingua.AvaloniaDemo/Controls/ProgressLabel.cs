@@ -33,7 +33,7 @@ public class ProgressLabel : TextBlock
         // GetObservable on a DirectProperty yields an IObservable<double> with
         // behavior-subject semantics (current value immediately, then every
         // change) — it plugs straight into the Arg overload.
-        _subscription = LanguageManager.Keys.Progress_Template.Format()
+        _subscription = LanguageManager.Keys.Progress_Template.CreateFormat()
             .Arg(this.GetObservable(ProgressProperty))
             .Build().Subscribe(new DelegateObserver<string?>(v => Text = v));
     }

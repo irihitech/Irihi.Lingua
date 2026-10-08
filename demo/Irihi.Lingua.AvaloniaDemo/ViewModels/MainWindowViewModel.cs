@@ -94,7 +94,7 @@ public partial class MainWindowViewModel : ObservableObject
     /// number/date formatting.
     /// </summary>
     public IObservable<string?> PageText =>
-        LanguageManager.Keys.Page_Template.Format()
+        LanguageManager.Keys.Page_Template.CreateFormat()
             .Arg(this, nameof(Page), s => s.Page)
             .Arg(this, nameof(TotalPages), s => s.TotalPages)
             .Build();
