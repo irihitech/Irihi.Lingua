@@ -95,8 +95,8 @@ public partial class MainWindowViewModel : ObservableObject
     /// </summary>
     public IObservable<string?> PageText =>
         LanguageManager.Keys.Page_Template.Format(
-            this.ObserveProperty(nameof(Page), () => Page),
-            this.ObserveProperty(nameof(TotalPages), () => TotalPages));
+            this.Property(nameof(Page), () => Page),
+            this.Property(nameof(TotalPages), () => TotalPages));
 
     // ── Helper ───────────────────────────────────────────────────────────────
 

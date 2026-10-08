@@ -263,7 +263,7 @@ Formatting uses the owning manager's active culture (passed to the converter thr
 
 ### `Format` from C# code
 
-`FormatTranslate`'s counterpart for ViewModel code is the `Format` extension method combined with `ObserveProperty`, which bridges plain `INotifyPropertyChanged` properties into observables:
+`FormatTranslate`'s counterpart for ViewModel code is the `Format` extension method. Plain `INotifyPropertyChanged` properties participate through lightweight live-property references created with the `Property` helper:
 
 ```csharp
 public class MainWindowViewModel : INotifyPropertyChanged
@@ -272,8 +272,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public IObservable<string?> PageText =>
         LanguageManager.Keys.Page_Template.Format(
-            this.ObserveProperty(nameof(Page), () => Page),
-            this.ObserveProperty(nameof(TotalPages), () => TotalPages));
+            this.Property(nameof(Page), () => Page),
+            this.Property(nameof(TotalPages), () => TotalPages));
 }
 ```
 
@@ -283,15 +283,15 @@ Bind it in XAML like any other Lingua observable:
 <TextBlock Text="{Binding PageText^}" />
 ```
 
-The returned observable emits the current formatted string immediately on subscription (behavior-subject semantics) and re-emits whenever the format template changes, any observable argument pushes a new value, or the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
+The returned observable emits the current formatted string immediately on subscription (behavior-subject semantics) and re-emits whenever the format template changes, any live argument changes, or the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
 
-Arguments can be constants, `ObserveProperty` bridges, other resource-key observables (`LanguageManager.Instance.Page_Title`), or any `IObservable<T>`. Value-type observables from other sources must be adapted with `Box()` first, because .NET generic covariance does not apply to value types:
+Arguments can be constants, live-property references (`this.Property(...)`), other resource-key observables (`LanguageManager.Instance.Page_Title`), or any `IObservable<T>`. Value-type observables from other sources must be adapted with `Box()` first, because .NET generic covariance does not apply to value types:
 
 ```csharp
 LanguageManager.Keys.Page_Template.Format(pageObservable.Box(), 10);
 ```
 
-`ObserveProperty` reads the property through the supplied getter delegate instead of reflection or expression trees, keeping it trimmer- and NativeAOT-friendly. It emits the current value on subscription and then every change (identical consecutive values are suppressed), and it honors the "all properties changed" convention of `PropertyChanged` events with an empty or `null` name.
+Live-property references are handled directly by the combiner: it subscribes the source's `PropertyChanged` event and re-reads the property through the supplied getter delegate — no reflection, no expression trees, keeping it trimmer- and NativeAOT-friendly. Setting a property to its current value does not re-emit (identical formatted results are suppressed), and `PropertyChanged` events with an empty or `null` name are honored as "all properties may have changed".
 
 ### CulturePicker — built-in culture switcher
 

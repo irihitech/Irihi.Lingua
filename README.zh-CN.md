@@ -261,7 +261,7 @@ xmlns:local="using:YourAppNamespace"
 
 ### 在 C# 代码中格式化（`Format`）
 
-`FormatTranslate` 在代码侧的对应物是 `Format` 扩展方法，配合 `ObserveProperty` 使用 —— 后者把普通的 `INotifyPropertyChanged` 属性桥接为可观察对象：
+`FormatTranslate` 在代码侧的对应物是 `Format` 扩展方法。普通的 `INotifyPropertyChanged` 属性通过 `Property` 帮助方法创建的轻量"活属性引用"参与格式化：
 
 ```csharp
 public class MainWindowViewModel : INotifyPropertyChanged
@@ -270,8 +270,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public IObservable<string?> PageText =>
         LanguageManager.Keys.Page_Template.Format(
-            this.ObserveProperty(nameof(Page), () => Page),
-            this.ObserveProperty(nameof(TotalPages), () => TotalPages));
+            this.Property(nameof(Page), () => Page),
+            this.Property(nameof(TotalPages), () => TotalPages));
 }
 ```
 
@@ -281,15 +281,15 @@ public class MainWindowViewModel : INotifyPropertyChanged
 <TextBlock Text="{Binding PageText^}" />
 ```
 
-返回的可观察对象在订阅时立即发出当前格式化结果（BehaviorSubject 语义），并在以下任一情况发生时重新发出：格式模板变化（例如切换了文化）、任一可观察参数推送新值、manager 的当前文化变化。格式化始终使用 manager 的 `CurrentCulture`（而非线程 culture），因此即使模板文本回退到默认文化，数字和日期的格式也与所选语言保持一致。
+返回的可观察对象在订阅时立即发出当前格式化结果（BehaviorSubject 语义），并在以下任一情况发生时重新发出：格式模板变化（例如切换了文化）、任一活参数变化、manager 的当前文化变化。格式化始终使用 manager 的 `CurrentCulture`（而非线程 culture），因此即使模板文本回退到默认文化，数字和日期的格式也与所选语言保持一致。
 
-参数可以是常量、`ObserveProperty` 桥接、其他资源键可观察对象（如 `LanguageManager.Instance.Page_Title`），或任意 `IObservable<T>`。来自其他来源的值类型可观察对象需要先用 `Box()` 适配，因为 .NET 泛型协变不适用于值类型：
+参数可以是常量、活属性引用（`this.Property(...)`）、其他资源键可观察对象（如 `LanguageManager.Instance.Page_Title`），或任意 `IObservable<T>`。来自其他来源的值类型可观察对象需要先用 `Box()` 适配，因为 .NET 泛型协变不适用于值类型：
 
 ```csharp
 LanguageManager.Keys.Page_Template.Format(pageObservable.Box(), 10);
 ```
 
-`ObserveProperty` 通过传入的 getter 委托读取属性，不使用反射或表达式树，因此对裁剪和 NativeAOT 友好。它在订阅时发出当前值，之后每次变化发出新值（相同的连续值会被抑制），并支持 `PropertyChanged` 以空或 null 名称表示"所有属性可能已变化"的约定。
+活属性引用由组合器直接处理：订阅源的 `PropertyChanged` 事件并通过传入的 getter 委托重新读取属性 —— 不使用反射、不使用表达式树，对裁剪和 NativeAOT 友好。属性被设置为相同值时不会重新发出（相同的格式化结果会被抑制），并支持 `PropertyChanged` 以空或 null 名称表示"所有属性可能已变化"的约定。
 
 ### CulturePicker — 内置文化切换控件
 

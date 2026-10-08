@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -201,24 +200,17 @@ public class FormatTranslateExtensionTests
         window.Close();
     }
 
-    private sealed class NumberViewModel : INotifyPropertyChanged
+    private sealed class NumberViewModel(decimal initial = 1.5m)
     {
-        private decimal _value = 1.5m;
-
-        public event PropertyChangedEventHandler? PropertyChanged;
+        private readonly LinguaObservable<decimal> _value = new("value", initial);
 
         public decimal Value
         {
-            get => _value;
-            set
-            {
-                _value = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
-            }
+            get => _value.CurrentValue;
+            set => _value.OnNext(value);
         }
 
-        public IObservable<object?> ValueObservable =>
-            this.ObserveProperty(nameof(Value), () => Value).Box();
+        public IObservable<decimal> ValueObservable => _value;
     }
 
     /// <summary>

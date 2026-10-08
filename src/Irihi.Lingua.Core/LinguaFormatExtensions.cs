@@ -24,9 +24,9 @@ namespace Irihi.Lingua;
 /// <example>
 /// <code>
 /// public IObservable&lt;string?&gt; PageText =&gt;
-///     LanguageManager.Instance.Keys.Page_Template.Format(
-///         this.ObserveProperty(nameof(Page), () =&gt; Page),
-///         this.ObserveProperty(nameof(TotalPages), () =&gt; TotalPages));
+///     LanguageManager.Keys.Page_Template.Format(
+///         this.Property(nameof(Page), () =&gt; Page),
+///         this.Property(nameof(TotalPages), () =&gt; TotalPages));
 /// </code>
 /// </example>
 public static class LinguaFormatExtensions
@@ -42,13 +42,18 @@ public static class LinguaFormatExtensions
     /// and the culture used for formatting.
     /// </param>
     /// <param name="args">
-    /// Zero or more arguments.  Each argument is either a constant value, or
-    /// any <see cref="IObservable{T}"/> that supplies the argument dynamically —
-    /// for example a <see cref="NotifyPropertyChangedExtensions.ObserveProperty{T}"/>
-    /// bridge, or another resource-key observable such as
-    /// <c>LanguageManager.Instance.SomeKey</c>.  Observable arguments are
-    /// recognized covariantly, so <c>IObservable&lt;int&gt;</c> and friends work
-    /// without manual boxing.
+    /// Zero or more arguments.  Each argument is one of:
+    /// <list type="bullet">
+    ///   <item>a constant value;</item>
+    ///   <item>any <see cref="IObservable{T}"/> that supplies the argument
+    ///   dynamically — for example another resource-key observable such as
+    ///   <c>LanguageManager.Instance.SomeKey</c>;</item>
+    ///   <item>a live property reference created with
+    ///   <see cref="PropertyChangeExtensions.Property"/> — the combiner
+    ///   subscribes the source's <c>PropertyChanged</c> event directly.</item>
+    /// </list>
+    /// Observable arguments are recognized covariantly, so
+    /// <c>IObservable&lt;int&gt;</c> and friends work without manual boxing.
     /// </param>
     /// <returns>
     /// An <see cref="IObservable{T}"/> of string with behavior-subject semantics

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Globalization;
 
 namespace Irihi.Lingua;
@@ -47,6 +48,7 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     private readonly object?[] _currentArgs;
     private readonly Func<IObserver<object?>, IDisposable>[] _sourceSubscribers;
     private readonly int[] _sourceArgIndices;
+    private readonly (PropertyChange Change, int Index)[] _propertyArgs;
 
 #if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
@@ -62,6 +64,7 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     private IDisposable? _formatSubscription;
     private IDisposable? _cultureSubscription;
     private IDisposable[] _argSubscriptions = [];
+    private PropertyChangedEventHandler? _propertyHandler;
 
     /// <summary>
     /// Initializes the combined observable.  Each entry of <paramref name="args"/>
@@ -88,6 +91,7 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
 
         var subscribers = new List<Func<IObserver<object?>, IDisposable>>(args.Length);
         var indices = new List<int>(args.Length);
+        var properties = new List<(PropertyChange Change, int Index)>();
         for (var i = 0; i < args.Length; i++)
         {
             // .NET generic covariance only covers reference conversions, so an
@@ -106,6 +110,12 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
                 subscribers.Add(subscriber);
                 indices.Add(i);
             }
+            else if (args[i] is PropertyChange propertyChange)
+            {
+                // Live-property arguments: the combiner subscribes the source's
+                // PropertyChanged event directly.
+                properties.Add((propertyChange, i));
+            }
             else
             {
                 _currentArgs[i] = args[i];
@@ -114,6 +124,7 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
 
         _sourceSubscribers = subscribers.ToArray();
         _sourceArgIndices = indices.ToArray();
+        _propertyArgs = properties.ToArray();
     }
 
     /// <summary>
@@ -176,57 +187,83 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
         {
             _cultureSubscription = _manager.CultureChanges.Subscribe(new CultureObserver(this));
         }
+
+        if (_propertyArgs.Length > 0)
+        {
+            // Prime the property snapshots before wiring the event so the
+            // initial emission reflects the current values.
+            lock (_gate)
+            {
+                foreach (var (change, index) in _propertyArgs)
+                    _currentArgs[index] = change.Getter();
+            }
+
+            _propertyHandler = (_, e) => OnPropertyChanged(e);
+            foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
+                source.PropertyChanged += _propertyHandler;
+        }
     }
 
     private void OnFormatValue(string? value)
     {
-        IObserver<string?>[] observers;
-        string result;
         lock (_gate)
         {
             _currentFormat = value;
-            if (_attaching || _observers.Length == 0) return;
-            result = ComputeCore();
-            // Safety net: a source may push without producing a new output
-            // (e.g. a custom-template path where the culture stream recomputes
-            // before the new template arrives). Suppress identical consecutive
-            // emissions so observers only see real changes.
-            if (result == _lastEmitted) return;
-            _lastEmitted = result;
-            observers = _observers;
         }
 
-        foreach (var observer in observers)
-            observer.OnNext(result);
+        EmitIfChanged();
     }
 
     private void OnArgValue(int index, object? value)
     {
-        IObserver<string?>[] observers;
-        string result;
         lock (_gate)
         {
             _currentArgs[index] = value;
-            if (_attaching || _observers.Length == 0) return;
-            result = ComputeCore();
-            if (result == _lastEmitted) return;
-            _lastEmitted = result;
-            observers = _observers;
         }
 
-        foreach (var observer in observers)
-            observer.OnNext(result);
+        EmitIfChanged();
     }
 
     private void OnCultureChanged()
+    {
+        EmitIfChanged();
+    }
+
+    private void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        // A null/empty property name means "any property may have changed".
+        var wildcard = string.IsNullOrEmpty(e.PropertyName);
+
+        lock (_gate)
+        {
+            foreach (var (change, index) in _propertyArgs)
+            {
+                if (!wildcard && e.PropertyName != change.PropertyName)
+                    continue;
+
+                _currentArgs[index] = change.Getter();
+            }
+        }
+
+        EmitIfChanged();
+    }
+
+    private void EmitIfChanged()
     {
         IObserver<string?>[] observers;
         string result;
         lock (_gate)
         {
-            if (_attaching || _observers.Length == 0) return;
+            if (_attaching || _observers.Length == 0)
+                return;
+
             result = ComputeCore();
-            if (result == _lastEmitted) return;
+            // Safety net: a source may push without producing a new output
+            // (e.g. a property set to its current value). Suppress identical
+            // consecutive emissions so observers only see real changes.
+            if (result == _lastEmitted)
+                return;
+
             _lastEmitted = result;
             observers = _observers;
         }
@@ -266,6 +303,7 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
         IDisposable? formatSub;
         IDisposable? cultureSub;
         IDisposable[] argSubs;
+        PropertyChangedEventHandler? propertyHandler;
 
         lock (_gate)
         {
@@ -280,12 +318,20 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
             _cultureSubscription = null;
             argSubs = _argSubscriptions;
             _argSubscriptions = [];
+            propertyHandler = _propertyHandler;
+            _propertyHandler = null;
         }
 
         formatSub?.Dispose();
         cultureSub?.Dispose();
         foreach (var subscription in argSubs)
             subscription?.Dispose();
+
+        if (propertyHandler is not null)
+        {
+            foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
+                source.PropertyChanged -= propertyHandler;
+        }
     }
 
     private sealed class FormatSubscription(LinguaFormatObservable parent, IObserver<string?> observer) : IDisposable

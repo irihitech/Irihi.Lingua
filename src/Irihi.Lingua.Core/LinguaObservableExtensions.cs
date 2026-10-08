@@ -15,10 +15,10 @@ public static class LinguaObservableExtensions
     /// observable of a value type (e.g. <c>IObservable&lt;int&gt;</c>) is not
     /// recognized automatically by
     /// <see cref="LinguaFormatExtensions.Format(ILinguaManager, IObservable{string?}, object?[])"/>.
-    /// Lingua's own observables (resource keys,
-    /// <see cref="NotifyPropertyChangedExtensions.ObserveProperty{T}"/>) are
-    /// recognized without boxing; use this method for custom value-type
-    /// observables from other libraries.
+    /// Lingua's own observables (resource keys) are recognized without boxing;
+    /// use this method for custom value-type observables from other libraries
+    /// (e.g. ReactiveUI's <c>WhenAnyValue</c>).  Live-property arguments created
+    /// with <see cref="PropertyChangeExtensions.Property"/> never need boxing.
     /// </para>
     /// <para>
     /// Reference-type observables are returned unchanged.
