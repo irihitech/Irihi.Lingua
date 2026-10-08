@@ -12,4 +12,7 @@
   <data name="Page_Template" xml:space="preserve">
     <value>第{0}页 共{1}</value>
   </data>
+  <data name="Progress_Template" xml:space="preserve">
+    <value>进度：{0:F0}%</value>
+  </data>
 </root>

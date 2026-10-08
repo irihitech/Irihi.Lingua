@@ -296,6 +296,16 @@ manager.Format(LinguaObservableString.FromLiteral("Page {0} of {1}"))
     .Arg(this, nameof(Page), () => Page);
 ```
 
+Avalonia 属性通过 `GetObservable` 加入链式调用——`StyledProperty` 和 `DirectProperty` 都支持：
+
+```csharp
+// TextBox.Text 是 DirectProperty；自定义控件自己的 DirectProperty 用法相同
+LanguageManager.Keys.Page_Template.Format()
+    .Arg(textBox.GetObservable(TextBox.TextProperty));
+```
+
+demo 中的 `ProgressLabel` 控件是一个完整示例：它注册了自己的 `Progress` DirectProperty 并用本地化模板格式化，在挂载时订阅、卸载时释放。
+
 ### CulturePicker — 内置文化切换控件
 
 `CulturePicker` 是一个 `TemplatedControl`，提供开箱即用的 `ComboBox` 用于切换文化。
