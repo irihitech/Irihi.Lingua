@@ -270,8 +270,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
     public IObservable<string?> PageText =>
         LanguageManager.Keys.Page_Template.Format()
-            .Arg(this, nameof(Page), () => Page)
-            .Arg(this, nameof(TotalPages), () => TotalPages)
+            .Arg(this, nameof(Page), s => s.Page)
+            .Arg(this, nameof(TotalPages), s => s.TotalPages)
             .Build();
 }
 ```
@@ -294,7 +294,7 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
 ```csharp
 manager.Format(LinguaObservableString.FromLiteral("Page {0} of {1}"))
-    .Arg(this, nameof(Page), () => Page)
+    .Arg(this, nameof(Page), s => s.Page)
     .Build();
 ```
 

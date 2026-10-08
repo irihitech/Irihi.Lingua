@@ -19,8 +19,8 @@ namespace Irihi.Lingua;
 /// <code>
 /// public IObservable&lt;string?&gt; PageText =&gt;
 ///     LanguageManager.Keys.Page_Template.Format()
-///         .Arg(this, nameof(Page), () =&gt; Page)
-///         .Arg(this, nameof(TotalPages), () =&gt; TotalPages)
+///         .Arg(this, nameof(Page), s =() =&gt; Page)gt; s.Page)
+///         .Arg(this, nameof(TotalPages), s =() =&gt; TotalPages)gt; s.TotalPages)
 ///         .Build();
 /// </code>
 /// </example>
@@ -103,17 +103,25 @@ public sealed class LinguaFormatBuilder
     /// <c>PropertyChanged</c> events with an empty or <c>null</c> name are
     /// honored as "all properties may have changed".
     /// </remarks>
+    /// <typeparam name="TSource">The type of <paramref name="source"/>.</typeparam>
     /// <param name="source">The object that raises <c>PropertyChanged</c>.</param>
     /// <param name="propertyName">The name of the property to observe (e.g. <c>nameof(Page)</c>).</param>
-    /// <param name="getter">A delegate that reads the current value of the property.</param>
-    public LinguaFormatBuilder Arg(
-        INotifyPropertyChanged source,
+    /// <param name="getter">
+    /// A delegate that reads the current value of the property from the source
+    /// (e.g. <c>s =&gt; s.Page</c>); value-type results are boxed.
+    /// </param>
+    public LinguaFormatBuilder Arg<TSource>(
+        TSource source,
         string propertyName,
-        Func<object?> getter)
+        Func<TSource, object?> getter)
+        where TSource : INotifyPropertyChanged
     {
-        var change = new PropertyChange(source, propertyName, getter);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+        ArgumentNullException.ThrowIfNull(getter);
         ThrowIfBuilt();
 
+        var change = new PropertyChange(source, propertyName, () => getter(source));
         _slots.Add(null);
         _properties.Add((change, _slots.Count - 1));
         return this;
