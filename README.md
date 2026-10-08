@@ -259,6 +259,40 @@ Use `FormatTranslateExtension` (or `FormatTranslate` in XAML) when the resource 
 In this example, `{0}` is filled by `#page.Value` and `{1}` is filled by `Greeting_Message`.
 When either the current culture changes or any bound argument value changes, the final text is recomputed automatically.
 
+Formatting uses the owning manager's active culture (passed to the converter through an internal trailing binding), so number and date arguments follow the selected language rather than the thread culture.
+
+### `Format` from C# code
+
+`FormatTranslate`'s counterpart for ViewModel code is the `Format` extension method combined with `ObserveProperty`, which bridges plain `INotifyPropertyChanged` properties into observables:
+
+```csharp
+public class MainWindowViewModel : INotifyPropertyChanged
+{
+    // Page and TotalPages raise PropertyChanged ...
+
+    public IObservable<string?> PageText =>
+        LanguageManager.Keys.Page_Template.Format(
+            this.ObserveProperty(nameof(Page), () => Page),
+            this.ObserveProperty(nameof(TotalPages), () => TotalPages));
+}
+```
+
+Bind it in XAML like any other Lingua observable:
+
+```xml
+<TextBlock Text="{Binding PageText^}" />
+```
+
+The returned observable emits the current formatted string immediately on subscription (behavior-subject semantics) and re-emits whenever the format template changes, any observable argument pushes a new value, or the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
+
+Arguments can be constants, `ObserveProperty` bridges, other resource-key observables (`LanguageManager.Instance.Page_Title`), or any `IObservable<T>`. Value-type observables from other sources must be adapted with `Box()` first, because .NET generic covariance does not apply to value types:
+
+```csharp
+LanguageManager.Keys.Page_Template.Format(pageObservable.Box(), 10);
+```
+
+`ObserveProperty` reads the property through the supplied getter delegate instead of reflection or expression trees, keeping it trimmer- and NativeAOT-friendly. It emits the current value on subscription and then every change (identical consecutive values are suppressed), and it honors the "all properties changed" convention of `PropertyChanged` events with an empty or `null` name.
+
 ### CulturePicker — built-in culture switcher
 
 `CulturePicker` is a `TemplatedControl` that provides a ready-to-use `ComboBox` for switching cultures.
