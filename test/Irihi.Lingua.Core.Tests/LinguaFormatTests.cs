@@ -17,7 +17,7 @@ public class LinguaFormatTests
     {
         var manager = CreateManager();
 
-        var formatted = manager.Keys("Fmt").Format(3, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg(3).Arg(10);
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -30,13 +30,27 @@ public class LinguaFormatTests
     {
         var manager = CreateManager();
 
-        var formatted = manager.Format(
-            LinguaObservableString.FromLiteral("Hello {0}"), "world");
+        var formatted = manager
+            .Format(LinguaObservableString.FromLiteral("Hello {0}"))
+            .Arg("world");
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         var single = Assert.Single(received);
         Assert.Equal("Hello world", single);
+    }
+
+    [Fact]
+    public void Format_NoArguments_EmitsTemplateAsIs()
+    {
+        var manager = CreateManager();
+
+        var formatted = manager.Keys("Name").Format();
+        var received = new List<string?>();
+        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        var single = Assert.Single(received);
+        Assert.Equal("Page", single);
     }
 
     // ── Argument kinds ───────────────────────────────────────────────────────
@@ -47,7 +61,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
         var page = new LinguaObservable<int>("page", 1);
 
-        var formatted = manager.Keys("Fmt").Format(page, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -64,7 +78,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
         var page = new LinguaObservable<int>("page", 2);
 
-        var formatted = manager.Keys("Fmt").Format(page, 99);
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(99);
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -79,10 +93,10 @@ public class LinguaFormatTests
     {
         var manager = CreateManager();
 
-        var formatted = manager.Format(
-            LinguaObservableString.FromLiteral("{0}: {1}"),
-            manager.GetObservable("Name")!,
-            7);
+        var formatted = manager
+            .Format(LinguaObservableString.FromLiteral("{0}: {1}"))
+            .Arg(manager.GetObservable("Name")!)
+            .Arg(7);
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -90,11 +104,30 @@ public class LinguaFormatTests
     }
 
     [Fact]
+    public void Format_ValueTypeObservableFromOtherLibrary_CanBeUsedAsArgument()
+    {
+        // Value-type observables are boxed by the Arg<T> overload — no
+        // adaptation needed, even for observables outside the Lingua family.
+        var manager = CreateManager();
+        var page = new CustomIntObservable(1);
+
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
+        var received = new List<string?>();
+        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        page.OnNext(6);
+
+        Assert.Equal(2, received.Count);
+        Assert.Equal("Page 1 of 10", received[0]);
+        Assert.Equal("Page 6 of 10", received[1]);
+    }
+
+    [Fact]
     public void Format_NullArgument_IsFormattedAsEmpty()
     {
         var manager = CreateManager();
 
-        var formatted = manager.Keys("Fmt").Format(null, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg((object?)null).Arg(10);
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -109,7 +142,7 @@ public class LinguaFormatTests
         var manager = CreateManager()
             .Add(new CultureInfo("zh-Hans"), ("Fmt", "第{0}页 共{1}页"), ("Name", "页"));
 
-        var formatted = manager.Keys("Fmt").Format(3, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg(3).Arg(10);
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -129,8 +162,9 @@ public class LinguaFormatTests
         var manager = CreateManager()
             .Add(new CultureInfo("de-DE"), ("Name", "Seite"));
 
-        var formatted = manager.Format(
-            LinguaObservableString.FromLiteral("Value: {0:F1}"), 1.5);
+        var formatted = manager
+            .Format(LinguaObservableString.FromLiteral("Value: {0:F1}"))
+            .Arg(1.5);
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -149,8 +183,9 @@ public class LinguaFormatTests
         try
         {
             var manager = CreateManager();
-            var formatted = manager.Format(
-                LinguaObservableString.FromLiteral("Value: {0:F1}"), 1.5);
+            var formatted = manager
+                .Format(LinguaObservableString.FromLiteral("Value: {0:F1}"))
+                .Arg(1.5);
 
             var received = new List<string?>();
             formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -169,8 +204,9 @@ public class LinguaFormatTests
     public void Format_NullTemplateValue_EmitsEmptyString()
     {
         var manager = CreateManager();
-        var formatted = manager.Format(
-            LinguaObservableString.FromLiteral(null), "arg");
+        var formatted = manager
+            .Format(LinguaObservableString.FromLiteral(null))
+            .Arg("arg");
 
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -183,8 +219,9 @@ public class LinguaFormatTests
     public void Format_InvalidTemplate_EmitsRawTemplate()
     {
         var manager = CreateManager();
-        var formatted = manager.Format(
-            LinguaObservableString.FromLiteral("{0"), "arg");
+        var formatted = manager
+            .Format(LinguaObservableString.FromLiteral("{0"))
+            .Arg("arg");
 
         var received = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -201,7 +238,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
         var page = new LinguaObservable<int>("page", 1);
 
-        var formatted = manager.Keys("Fmt").Format(page, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var received = new List<string?>();
         var subscription = formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -216,7 +253,7 @@ public class LinguaFormatTests
     public void Format_Dispose_CalledTwice_DoesNotThrow()
     {
         var manager = CreateManager();
-        var formatted = manager.Keys("Fmt").Format(1, 2);
+        var formatted = manager.Keys("Fmt").Format().Arg(1).Arg(2);
 
         var subscription = formatted.Subscribe(new DelegateObserver<string?>(_ => { }));
         subscription.Dispose();
@@ -232,7 +269,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
         var page = new LinguaObservable<int>("page", 1);
 
-        var formatted = manager.Keys("Fmt").Format(page, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var first = new List<string?>();
         var subscription = formatted.Subscribe(new DelegateObserver<string?>(v => first.Add(v)));
         subscription.Dispose();
@@ -253,7 +290,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
         var page = new LinguaObservable<int>("page", 1);
 
-        var formatted = manager.Keys("Fmt").Format(page, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var receivedA = new List<string?>();
         var receivedB = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
@@ -273,7 +310,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
         var page = new LinguaObservable<int>("page", 1);
 
-        var formatted = manager.Keys("Fmt").Format(page, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
         var receivedA = new List<string?>();
         var receivedB = new List<string?>();
         var subA = formatted.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
@@ -286,37 +323,39 @@ public class LinguaFormatTests
         Assert.Equal(2, receivedB.Count);
     }
 
+    // ── Builder behaviour ────────────────────────────────────────────────────
+
     [Fact]
-    public void Format_BoxedCustomValueObservable_CanBeUsedAsArgument()
+    public void FormatBuilder_FrozenAfterFirstSubscription_ThrowsOnFurtherArg()
     {
-        // .NET covariance does not cover value-type observables from other
-        // sources; Box() adapts them.
         var manager = CreateManager();
-        var page = new CustomIntObservable(1);
 
-        var formatted = manager.Keys("Fmt").Format(page.Box(), 10);
-        var received = new List<string?>();
-        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+        var builder = manager.Keys("Fmt").Format().Arg(1);
+        builder.Subscribe(new DelegateObserver<string?>(_ => { }));
 
-        page.OnNext(6);
-
-        Assert.Equal(2, received.Count);
-        Assert.Equal("Page 1 of 10", received[0]);
-        Assert.Equal("Page 6 of 10", received[1]);
+        Assert.Throws<InvalidOperationException>(() => builder.Arg(2));
+        Assert.Throws<InvalidOperationException>(() =>
+            builder.Arg(new LinguaObservable<int>("page", 1)));
     }
 
     [Fact]
-    public void Box_ReferenceTypeObservable_ReturnsSameInstance()
+    public void FormatBuilder_MultipleSubscriptions_ShareOneCombiner()
     {
-        IObservable<string?> source = LinguaObservableString.FromLiteral("x");
-        Assert.Same(source, source.Box());
-    }
+        // Both subscriptions go through the same lazily-created combiner, so
+        // they observe the same stream.
+        var manager = CreateManager();
+        var page = new LinguaObservable<int>("page", 1);
 
-    [Fact]
-    public void Box_NullSource_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() =>
-            LinguaObservableExtensions.Box<int>(null!));
+        var builder = manager.Keys("Fmt").Format().Arg(page).Arg(10);
+        var receivedA = new List<string?>();
+        var receivedB = new List<string?>();
+        builder.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
+        builder.Subscribe(new DelegateObserver<string?>(v => receivedB.Add(v)));
+
+        page.OnNext(2);
+
+        Assert.Equal("Page 2 of 10", receivedA[1]);
+        Assert.Equal("Page 2 of 10", receivedB[1]);
     }
 
     // ── Argument validation ──────────────────────────────────────────────────
@@ -325,7 +364,7 @@ public class LinguaFormatTests
     public void Format_NullKey_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            LinguaFormatExtensions.Format(null!, 1));
+            LinguaFormatExtensions.Format(null!));
     }
 
     [Fact]
@@ -333,7 +372,7 @@ public class LinguaFormatTests
     {
         var manager = CreateManager();
         Assert.Throws<ArgumentException>(() =>
-            manager.Keys("NoSuchKey").Format(1));
+            manager.Keys("NoSuchKey").Format());
     }
 
     [Fact]
@@ -350,6 +389,14 @@ public class LinguaFormatTests
             CreateManager().Format(null!));
     }
 
+    [Fact]
+    public void Format_NullObservableArg_ThrowsArgumentNullException()
+    {
+        var manager = CreateManager();
+        Assert.Throws<ArgumentNullException>(() =>
+            manager.Keys("Fmt").Format().Arg<int>(null!));
+    }
+
     // ── Thread safety smoke test ─────────────────────────────────────────────
 
     [Fact]
@@ -358,7 +405,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
         var page = new LinguaObservable<int>("page", 1);
 
-        var formatted = manager.Keys("Fmt").Format(page, 10);
+        var formatted = manager.Keys("Fmt").Format().Arg(page).Arg(10);
 
         var tasks = Enumerable.Range(0, 8).Select(i => Task.Run(() =>
         {

@@ -11,7 +11,7 @@ namespace Irihi.Lingua;
 /// by the code generated for classes marked with <see cref="LinguaManagerAttribute"/>.
 /// It does not require any additional reactive library.
 /// </remarks>
-public class LinguaObservable<T> : IObservable<T>, IBoxedObservable
+public class LinguaObservable<T> : IObservable<T>
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
@@ -105,9 +105,6 @@ public class LinguaObservable<T> : IObservable<T>, IBoxedObservable
             _observers = [];
         }
     }
-
-    IDisposable IBoxedObservable.SubscribeBoxed(IObserver<object?> observer) =>
-        Subscribe(new BoxingObserver<T>(observer));
 }
 
 sealed class Subscription<T>(LinguaObservable<T> parent, IObserver<T> observer) : IDisposable

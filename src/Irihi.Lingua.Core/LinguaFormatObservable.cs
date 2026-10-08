@@ -46,8 +46,7 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     private readonly IObservable<string?> _format;
     private readonly bool _subscribeCultureChanges;
     private readonly object?[] _currentArgs;
-    private readonly Func<IObserver<object?>, IDisposable>[] _sourceSubscribers;
-    private readonly int[] _sourceArgIndices;
+    private readonly (Func<IObserver<object?>, IDisposable> Subscribe, int Index)[] _sourceArgs;
     private readonly (PropertyChange Change, int Index)[] _propertyArgs;
 
 #if NET9_0_OR_GREATER
@@ -67,9 +66,10 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     private PropertyChangedEventHandler? _propertyHandler;
 
     /// <summary>
-    /// Initializes the combined observable.  Each entry of <paramref name="args"/>
-    /// is either a constant value (boxed as-is) or an <see cref="IObservable{T}"/>
-    /// that supplies the argument dynamically.
+    /// Initializes the combined observable with pre-classified arguments.
+    /// Constants sit in <paramref name="initialArgs"/> at their positions;
+    /// observable and live-property arguments are supplied separately with
+    /// their argument indices.
     /// </summary>
     /// <param name="subscribeCultureChanges">
     /// Pass <c>false</c> when the format template is a manager key observable —
@@ -81,50 +81,17 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     public LinguaFormatObservable(
         ILinguaManager manager,
         IObservable<string?> format,
-        object?[] args,
-        bool subscribeCultureChanges = true)
+        bool subscribeCultureChanges,
+        object?[] initialArgs,
+        (Func<IObserver<object?>, IDisposable> Subscribe, int Index)[] sources,
+        (PropertyChange Change, int Index)[] properties)
     {
         _manager = manager;
         _format = format;
         _subscribeCultureChanges = subscribeCultureChanges;
-        _currentArgs = new object?[args.Length];
-
-        var subscribers = new List<Func<IObserver<object?>, IDisposable>>(args.Length);
-        var indices = new List<int>(args.Length);
-        var properties = new List<(PropertyChange Change, int Index)>();
-        for (var i = 0; i < args.Length; i++)
-        {
-            // .NET generic covariance only covers reference conversions, so an
-            // observable of a value type (e.g. IObservable<int>) does not match
-            // IObservable<object?>.  The IBoxedObservable path covers Lingua's
-            // own observables without reflection; other user observables can be
-            // adapted beforehand with the Box() extension.
-            Func<IObserver<object?>, IDisposable>? subscriber = null;
-            if (args[i] is IObservable<object?> referenceSource)
-                subscriber = referenceSource.Subscribe;
-            else if (args[i] is IBoxedObservable boxedSource)
-                subscriber = boxedSource.SubscribeBoxed;
-
-            if (subscriber is not null)
-            {
-                subscribers.Add(subscriber);
-                indices.Add(i);
-            }
-            else if (args[i] is PropertyChange propertyChange)
-            {
-                // Live-property arguments: the combiner subscribes the source's
-                // PropertyChanged event directly.
-                properties.Add((propertyChange, i));
-            }
-            else
-            {
-                _currentArgs[i] = args[i];
-            }
-        }
-
-        _sourceSubscribers = subscribers.ToArray();
-        _sourceArgIndices = indices.ToArray();
-        _propertyArgs = properties.ToArray();
+        _currentArgs = initialArgs;
+        _sourceArgs = sources;
+        _propertyArgs = properties;
     }
 
     /// <summary>
@@ -177,10 +144,10 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     {
         _formatSubscription = _format.Subscribe(new FormatObserver(this));
 
-        _argSubscriptions = new IDisposable[_sourceSubscribers.Length];
-        for (var i = 0; i < _sourceSubscribers.Length; i++)
+        _argSubscriptions = new IDisposable[_sourceArgs.Length];
+        for (var i = 0; i < _sourceArgs.Length; i++)
         {
-            _argSubscriptions[i] = _sourceSubscribers[i](new ArgObserver(this, _sourceArgIndices[i]));
+            _argSubscriptions[i] = _sourceArgs[i].Subscribe(new ArgObserver(this, _sourceArgs[i].Index));
         }
 
         if (_subscribeCultureChanges)

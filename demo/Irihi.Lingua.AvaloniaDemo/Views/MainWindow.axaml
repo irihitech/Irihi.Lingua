@@ -119,7 +119,7 @@
         <!-- ═══ Format from C# code demo ═══ -->
         <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
             <StackPanel Spacing="8">
-                <TextBlock Text="Format (C# — Property + Format)" FontSize="14" FontWeight="Bold"
+                <TextBlock Text="Format (C# — chained builder)" FontSize="14" FontWeight="Bold"
                            Foreground="DodgerBlue" />
                 <TextBlock Text="Same template, consumed from the ViewModel."
                            FontSize="11" Foreground="Gray" />

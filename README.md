@@ -263,7 +263,7 @@ Formatting uses the owning manager's active culture (passed to the converter thr
 
 ### `Format` from C# code
 
-`FormatTranslate`'s counterpart for ViewModel code is the `Format` extension method. Plain `INotifyPropertyChanged` properties participate through lightweight live-property references created with the `Property` helper:
+`FormatTranslate`'s counterpart for ViewModel code is the fluent `Format` builder. It starts from a format-template key and chains arguments with `Arg`:
 
 ```csharp
 public class MainWindowViewModel : INotifyPropertyChanged
@@ -271,9 +271,9 @@ public class MainWindowViewModel : INotifyPropertyChanged
     // Page and TotalPages raise PropertyChanged ...
 
     public IObservable<string?> PageText =>
-        LanguageManager.Keys.Page_Template.Format(
-            this.Property(nameof(Page), () => Page),
-            this.Property(nameof(TotalPages), () => TotalPages));
+        LanguageManager.Keys.Page_Template.Format()
+            .Arg(this, nameof(Page), () => Page)
+            .Arg(this, nameof(TotalPages), () => TotalPages);
 }
 ```
 
@@ -283,15 +283,20 @@ Bind it in XAML like any other Lingua observable:
 <TextBlock Text="{Binding PageText^}" />
 ```
 
-The returned observable emits the current formatted string immediately on subscription (behavior-subject semantics) and re-emits whenever the format template changes, any live argument changes, or the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
+The builder itself is the `IObservable<string?>` — no terminal method is needed. It behaves like a behavior subject: subscribing immediately emits the current formatted string, and every subsequent change re-emits a recomputed value — whenever the format template changes (e.g. because the active culture changed), whenever a live argument changes, or (for custom template sources) whenever the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
 
-Arguments can be constants, live-property references (`this.Property(...)`), other resource-key observables (`LanguageManager.Instance.Page_Title`), or any `IObservable<T>`. Value-type observables from other sources must be adapted with `Box()` first, because .NET generic covariance does not apply to value types:
+`Arg` has three overloads, one per argument kind:
+
+- `Arg(constant)` — a fixed value;
+- `Arg(observable)` — any `IObservable<T>`; value types (e.g. ReactiveUI's `WhenAnyValue`) are boxed automatically, no adaptation needed;
+- `Arg(source, propertyName, getter)` — a live property: the combiner subscribes the source's `PropertyChanged` event directly and re-reads the property through the getter delegate — no reflection, no expression trees, keeping it trimmer- and NativeAOT-friendly. Setting a property to its current value does not re-emit (identical formatted results are suppressed), and `PropertyChanged` events with an empty or `null` name are honored as "all properties may have changed".
+
+For a custom template source, start the chain from the manager instead:
 
 ```csharp
-LanguageManager.Keys.Page_Template.Format(pageObservable.Box(), 10);
+manager.Format(LinguaObservableString.FromLiteral("Page {0} of {1}"))
+    .Arg(this, nameof(Page), () => Page);
 ```
-
-Live-property references are handled directly by the combiner: it subscribes the source's `PropertyChanged` event and re-reads the property through the supplied getter delegate — no reflection, no expression trees, keeping it trimmer- and NativeAOT-friendly. Setting a property to its current value does not re-emit (identical formatted results are suppressed), and `PropertyChanged` events with an empty or `null` name are honored as "all properties may have changed".
 
 ### CulturePicker — built-in culture switcher
 

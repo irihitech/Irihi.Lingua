@@ -10,7 +10,7 @@ public class PropertyChangeTests
         .Add(CultureInfo.InvariantCulture, ("Fmt", "Page {0} of {1}"))
         .Add(new CultureInfo("zh-Hans"), ("Fmt", "第{0}页 共{1}页"));
 
-    // ── Live arguments through Format ────────────────────────────────────────
+    // ── Live property arguments through Format ───────────────────────────────
 
     [Fact]
     public void Format_PropertyArgument_EmitsCurrentPropertyValueImmediately()
@@ -19,8 +19,9 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 3, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt")
-            .Format(model.Property(nameof(TestModel.Page), () => model.Page), 10)
+        manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(10)
             .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         var single = Assert.Single(received);
@@ -34,10 +35,9 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt")
-            .Format(
-                model.Property(nameof(TestModel.Page), () => model.Page),
-                model.Property(nameof(TestModel.TotalPages), () => model.TotalPages))
+        manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(model, nameof(TestModel.TotalPages), () => model.TotalPages)
             .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 4;
@@ -58,8 +58,9 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt")
-            .Format(model.Property(nameof(TestModel.Page), () => model.Page), 10)
+        manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(10)
             .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Name = "unrelated";
@@ -74,12 +75,13 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt")
-            .Format(model.Property(nameof(TestModel.Page), () => model.Page), 10)
+        manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(10)
             .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
-        model.Page = 2;   // normal raise
-        model.Raise(null);      // "everything changed" raise
+        model.Page = 2;       // normal raise
+        model.Raise(null);    // "everything changed" raise
         model.Raise(string.Empty);
 
         Assert.Equal(new[] { "Page 1 of 10", "Page 2 of 10" }, received);
@@ -92,8 +94,9 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt")
-            .Format(model.Property(nameof(TestModel.Page), () => model.Page), 10)
+        manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(10)
             .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 1; // setter raises even though the value is the same
@@ -109,8 +112,8 @@ public class PropertyChangeTests
         var model = new TestModel { Name = "abc" };
 
         var received = new List<string?>();
-        manager.Keys("Fmt")
-            .Format(model.Property(nameof(TestModel.Name), () => model.Name))
+        manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Name), () => model.Name)
             .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Name = "xyz";
@@ -126,8 +129,9 @@ public class PropertyChangeTests
         var manager = CreateManager();
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
-        var formatted = manager.Keys("Fmt")
-            .Format(model.Property(nameof(TestModel.Page), () => model.Page), 10);
+        var formatted = manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(10);
         var received = new List<string?>();
         var subscription = formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
@@ -143,8 +147,9 @@ public class PropertyChangeTests
         var manager = CreateManager();
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
-        var formatted = manager.Keys("Fmt")
-            .Format(model.Property(nameof(TestModel.Page), () => model.Page), 10);
+        var formatted = manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(10);
         var first = new List<string?>();
         var subscription = formatted.Subscribe(new DelegateObserver<string?>(v => first.Add(v)));
         subscription.Dispose();
@@ -165,8 +170,9 @@ public class PropertyChangeTests
         var manager = CreateManager();
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
-        var formatted = manager.Keys("Fmt")
-            .Format(model.Property(nameof(TestModel.Page), () => model.Page), 10);
+        var formatted = manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(10);
         var receivedA = new List<string?>();
         var receivedB = new List<string?>();
         formatted.Subscribe(new DelegateObserver<string?>(v => receivedA.Add(v)));
@@ -188,10 +194,9 @@ public class PropertyChangeTests
         var extra = new LinguaObservable<int>("extra", 5);
 
         var received = new List<string?>();
-        manager.Keys("Fmt")
-            .Format(
-                model.Property(nameof(TestModel.Page), () => model.Page),
-                extra)
+        manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(extra)
             .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 3;
@@ -214,10 +219,9 @@ public class PropertyChangeTests
         var model = new TestModel { Page = 1, TotalPages = 10 };
 
         var received = new List<string?>();
-        manager.Keys("Fmt")
-            .Format(
-                model.Property(nameof(TestModel.Page), () => model.Page),
-                model.Property(nameof(TestModel.TotalPages), () => model.TotalPages))
+        manager.Keys("Fmt").Format()
+            .Arg(model, nameof(TestModel.Page), () => model.Page)
+            .Arg(model, nameof(TestModel.TotalPages), () => model.TotalPages)
             .Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
 
         model.Page = 4;
@@ -236,33 +240,29 @@ public class PropertyChangeTests
     // ── Argument validation ──────────────────────────────────────────────────
 
     [Fact]
-    public void PropertyChange_Constructor_NullSource_ThrowsArgumentNullException()
+    public void Format_PropertyArgument_NullSource_ThrowsArgumentNullException()
     {
+        var manager = CreateManager();
         Assert.Throws<ArgumentNullException>(() =>
-            new PropertyChange(null!, nameof(TestModel.Page), () => 1));
+            manager.Keys("Fmt").Format().Arg(null!, nameof(TestModel.Page), () => 1));
     }
 
     [Fact]
-    public void PropertyChange_Constructor_EmptyPropertyName_ThrowsArgumentException()
+    public void Format_PropertyArgument_EmptyPropertyName_ThrowsArgumentException()
     {
+        var manager = CreateManager();
         var model = new TestModel();
         Assert.Throws<ArgumentException>(() =>
-            new PropertyChange(model, "", () => model.Page));
+            manager.Keys("Fmt").Format().Arg(model, "", () => model.Page));
     }
 
     [Fact]
-    public void PropertyChange_Constructor_NullGetter_ThrowsArgumentNullException()
+    public void Format_PropertyArgument_NullGetter_ThrowsArgumentNullException()
     {
+        var manager = CreateManager();
         var model = new TestModel();
         Assert.Throws<ArgumentNullException>(() =>
-            new PropertyChange(model, nameof(TestModel.Page), null!));
-    }
-
-    [Fact]
-    public void Property_NullSource_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() =>
-            PropertyChangeExtensions.Property(null!, nameof(TestModel.Page), () => 1));
+            manager.Keys("Fmt").Format().Arg(model, nameof(TestModel.Page), null!));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ public class PropertyChangeTests
             set
             {
                 _page = value;
-                Raise(nameof(TestModel.Page));
+                Raise(nameof(Page));
             }
         }
 
@@ -298,7 +298,7 @@ public class PropertyChangeTests
             set
             {
                 _totalPages = value;
-                Raise(nameof(TestModel.TotalPages));
+                Raise(nameof(TotalPages));
             }
         }
 
@@ -308,7 +308,7 @@ public class PropertyChangeTests
             set
             {
                 _name = value;
-                Raise(nameof(TestModel.Name));
+                Raise(nameof(Name));
             }
         }
 
