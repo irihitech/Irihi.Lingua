@@ -284,13 +284,23 @@ Bind it in XAML like any other Lingua observable:
 <TextBlock Text="{Binding PageText^}" />
 ```
 
-`Build()` composes the chain into the final `IObservable<string?>`. The built observable behaves like a behavior subject: subscribing immediately emits the current formatted string, and every subsequent change re-emits a recomputed value — whenever the format template changes (e.g. because the active culture changed), whenever a live argument changes, or (for custom template sources) whenever the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
+`Build()` composes the chain into the final observable (a `LinguaFormatObservable`, itself an `IObservable<string?>`), which additionally exposes `Refresh()`: it re-reads every pull-based argument (live properties and computed getters), recomputes with the manager's current culture, and notifies subscribers even when the result is unchanged — handy for a refresh button:
 
-`Arg` has three overloads, one per argument kind:
+```csharp
+private readonly LinguaFormatObservable _stampText =
+    manager.CreateFormat("Total {0}").Arg(() => _service.GetLiveTotal()).Build();
+
+private void Refresh() => _stampText.Refresh();
+```
+
+Observable arguments are push-only — `Refresh()` does not re-read them; constants are fixed at build time. The built observable behaves like a behavior subject: subscribing immediately emits the current formatted string, and every subsequent change re-emits a recomputed value — whenever the format template changes (e.g. because the active culture changed), whenever a live argument changes, or (for custom template sources) whenever the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
+
+`Arg` has four overloads, one per argument kind:
 
 - `Arg(constant)` — a fixed value;
 - `Arg(observable)` — any `IObservable<T>`; value types (e.g. ReactiveUI's `WhenAnyValue`) are boxed automatically, no adaptation needed;
-- `Arg(source, propertyName, getter)` — a live property: the combiner subscribes the source's `PropertyChanged` event directly and re-reads the property through the getter delegate — no reflection, no expression trees, keeping it trimmer- and NativeAOT-friendly. Setting a property to its current value does not re-emit (identical formatted results are suppressed), and `PropertyChanged` events with an empty or `null` name are honored as "all properties may have changed".
+- `Arg(source, propertyName, getter)` — a live property: the combiner subscribes the source's `PropertyChanged` event directly and re-reads the property through the getter delegate — no reflection, no expression trees, keeping it trimmer- and NativeAOT-friendly. Setting a property to its current value does not re-emit (identical formatted results are suppressed), and `PropertyChanged` events with an empty or `null` name are honored as "all properties may have changed";
+- `Arg(getter)` — a computed, read-on-demand value: read once on first subscription and on every `Refresh()`. The source does not need to implement `INotifyPropertyChanged` — use it for plain properties or external state without change notifications.
 
 For a custom or constant template, start the chain from the manager with `CreateFormat` instead:
 

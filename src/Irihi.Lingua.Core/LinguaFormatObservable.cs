@@ -40,7 +40,7 @@ namespace Irihi.Lingua;
 /// long-lived manager observables.
 /// </para>
 /// </remarks>
-internal sealed class LinguaFormatObservable : IObservable<string?>
+public sealed class LinguaFormatObservable : IObservable<string?>
 {
     private readonly ILinguaManager _manager;
     private readonly IObservable<string?> _format;
@@ -48,6 +48,7 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     private readonly object?[] _currentArgs;
     private readonly (Func<IObserver<object?>, IDisposable> Subscribe, int Index)[] _sourceArgs;
     private readonly (PropertyChange Change, int Index)[] _propertyArgs;
+    private readonly (Func<object?> Read, int Index)[] _computedArgs;
 
 #if NET9_0_OR_GREATER
     private readonly Lock _gate = new();
@@ -68,8 +69,10 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     /// <summary>
     /// Initializes the combined observable with pre-classified arguments.
     /// Constants sit in <paramref name="initialArgs"/> at their positions;
-    /// observable and live-property arguments are supplied separately with
-    /// their argument indices.
+    /// observable, live-property and computed arguments are supplied separately
+    /// with their argument indices.  Creation is internal — use a
+    /// <see cref="LinguaFormatBuilder"/> chain ending in
+    /// <see cref="LinguaFormatBuilder.Build"/>.
     /// </summary>
     /// <param name="subscribeCultureChanges">
     /// Pass <c>false</c> when the format template is a manager key observable —
@@ -78,13 +81,14 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
     /// (the default, and the safe choice for custom template sources) to also
     /// subscribe the manager's <see cref="ILinguaManager.CultureChanges"/> stream.
     /// </param>
-    public LinguaFormatObservable(
+    internal LinguaFormatObservable(
         ILinguaManager manager,
         IObservable<string?> format,
         bool subscribeCultureChanges,
         object?[] initialArgs,
         (Func<IObserver<object?>, IDisposable> Subscribe, int Index)[] sources,
-        (PropertyChange Change, int Index)[] properties)
+        (PropertyChange Change, int Index)[] properties,
+        (Func<object?> Read, int Index)[] computedArgs)
     {
         _manager = manager;
         _format = format;
@@ -92,6 +96,7 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
         _currentArgs = initialArgs;
         _sourceArgs = sources;
         _propertyArgs = properties;
+        _computedArgs = computedArgs;
     }
 
     /// <summary>
@@ -155,19 +160,24 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
             _cultureSubscription = _manager.CultureChanges.Subscribe(new CultureObserver(this));
         }
 
-        if (_propertyArgs.Length > 0)
+        if (_propertyArgs.Length > 0 || _computedArgs.Length > 0)
         {
-            // Prime the property snapshots before wiring the event so the
-            // initial emission reflects the current values.
+            // Prime the property and computed snapshots before wiring events
+            // so the initial emission reflects the current values.
             lock (_gate)
             {
                 foreach (var (change, index) in _propertyArgs)
                     _currentArgs[index] = change.Getter();
+                foreach (var (read, index) in _computedArgs)
+                    _currentArgs[index] = read();
             }
 
-            _propertyHandler = (_, e) => OnPropertyChanged(e);
-            foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
-                source.PropertyChanged += _propertyHandler;
+            if (_propertyArgs.Length > 0)
+            {
+                _propertyHandler = (_, e) => OnPropertyChanged(e);
+                foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
+                    source.PropertyChanged += _propertyHandler;
+            }
         }
     }
 
@@ -231,6 +241,39 @@ internal sealed class LinguaFormatObservable : IObservable<string?>
             if (result == _lastEmitted)
                 return;
 
+            _lastEmitted = result;
+            observers = _observers;
+        }
+
+        foreach (var observer in observers)
+            observer.OnNext(result);
+    }
+
+    /// <summary>
+    /// Forces a refresh: re-reads every pull-based argument (live-property
+    /// getters and computed getters), recomputes the formatted string with the
+    /// manager's active culture, and notifies current subscribers even when
+    /// the result is unchanged.
+    /// </summary>
+    /// <remarks>
+    /// Observable arguments are push-only — <c>Refresh</c> does not (and
+    /// cannot) re-read them; their values only arrive through their own
+    /// notifications.  Constants are fixed at build time.  Calling
+    /// <c>Refresh</c> while nobody is subscribed is safe: the snapshots are
+    /// still refreshed and the next subscriber receives the up-to-date value.
+    /// </remarks>
+    public void Refresh()
+    {
+        IObserver<string?>[] observers;
+        string result;
+        lock (_gate)
+        {
+            foreach (var (change, index) in _propertyArgs)
+                _currentArgs[index] = change.Getter();
+            foreach (var (read, index) in _computedArgs)
+                _currentArgs[index] = read();
+
+            result = ComputeCore();
             _lastEmitted = result;
             observers = _observers;
         }

@@ -356,6 +356,113 @@ public class LinguaFormatTests
         Assert.Equal("Page 2 of 10", receivedB[1]);
     }
 
+    // ── Computed arguments and Refresh ───────────────────────────────────────
+
+    [Fact]
+    public void CreateFormat_ComputedArg_EmitsInitialValueOnSubscribe()
+    {
+        var manager = CreateManager();
+        var plain = new PlainModel { Total = 7 };
+
+        var received = new List<string?>();
+        manager.Keys("Fmt").CreateFormat()
+            .Arg(3)
+            .Arg(() => plain.Total)
+            .Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        var single = Assert.Single(received);
+        Assert.Equal("Page 3 of 7", single);
+    }
+
+    [Fact]
+    public void CreateFormat_ComputedArg_WithoutRefresh_DoesNotEmit()
+    {
+        var manager = CreateManager();
+        var plain = new PlainModel { Total = 7 };
+
+        var formatted = manager.Keys("Fmt").CreateFormat()
+            .Arg(3)
+            .Arg(() => plain.Total)
+            .Build();
+        var received = new List<string?>();
+        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        plain.Total = 9; // no notifications exist for a computed arg
+        Assert.Single(received);
+
+        formatted.Refresh();
+        Assert.Equal(2, received.Count);
+        Assert.Equal("Page 3 of 9", received[1]);
+    }
+
+    [Fact]
+    public void Refresh_RereadsLivePropertyGetters()
+    {
+        var manager = CreateManager();
+        var model = new SilentModel { Value = 1 }; // INPC, but never raises
+
+        var formatted = manager.Keys("Fmt").CreateFormat()
+            .Arg(3)
+            .Arg(model, nameof(SilentModel.Value), s => s.Value)
+            .Build();
+        var received = new List<string?>();
+        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        model.Value = 8; // silent change, no event
+        Assert.Single(received);
+
+        formatted.Refresh();
+        Assert.Equal("Page 3 of 8", received[1]);
+    }
+
+    [Fact]
+    public void Refresh_NotifiesEvenWhenResultUnchanged()
+    {
+        var manager = CreateManager();
+
+        var formatted = manager.Keys("Fmt").CreateFormat()
+            .Arg(3)
+            .Arg(10)
+            .Build();
+        var received = new List<string?>();
+        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        formatted.Refresh();
+        formatted.Refresh();
+
+        Assert.Equal(3, received.Count); // explicit refresh bypasses dedup
+        Assert.All(received, v => Assert.Equal("Page 3 of 10", v));
+    }
+
+    [Fact]
+    public void Refresh_WithNoSubscribers_NextSubscribeSeesFreshValues()
+    {
+        var manager = CreateManager();
+        var plain = new PlainModel { Total = 7 };
+
+        var formatted = manager.Keys("Fmt").CreateFormat()
+            .Arg(3)
+            .Arg(() => plain.Total)
+            .Build();
+
+        plain.Total = 12;
+        formatted.Refresh(); // nobody listening — must not throw
+
+        var received = new List<string?>();
+        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        var single = Assert.Single(received);
+        Assert.Equal("Page 3 of 12", single);
+    }
+
+    [Fact]
+    public void CreateFormat_ComputedArg_NullGetter_ThrowsArgumentNullException()
+    {
+        var manager = CreateManager();
+        Assert.Throws<ArgumentNullException>(() =>
+            manager.Keys("Fmt").CreateFormat().Arg((Func<int>)null!));
+    }
+
     // ── Argument validation ──────────────────────────────────────────────────
 
     [Fact]
@@ -401,7 +508,7 @@ public class LinguaFormatTests
     {
         var manager = CreateManager();
         Assert.Throws<ArgumentNullException>(() =>
-            manager.Keys("Fmt").CreateFormat().Arg<int>(null!));
+            manager.Keys("Fmt").CreateFormat().Arg((IObservable<int>)null!));
     }
 
     // ── Thread safety smoke test ─────────────────────────────────────────────
@@ -468,5 +575,19 @@ public class LinguaFormatTests
                     dispose();
             }
         }
+    }
+
+    /// <summary>A plain holder without INotifyPropertyChanged.</summary>
+    private sealed class PlainModel
+    {
+        public int Total { get; set; }
+    }
+
+    /// <summary>An INPC source that never raises PropertyChanged.</summary>
+    private sealed class SilentModel : System.ComponentModel.INotifyPropertyChanged
+    {
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+        public int Value { get; set; }
     }
 }

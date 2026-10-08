@@ -50,6 +50,7 @@ public sealed class LinguaFormatBuilder
     private readonly List<object?> _slots = [];
     private readonly List<(Func<IObserver<object?>, IDisposable> Subscribe, int Index)> _sources = [];
     private readonly List<(PropertyChange Change, int Index)> _properties = [];
+    private readonly List<(Func<object?> Read, int Index)> _computed = [];
 
     private bool _built;
 
@@ -88,6 +89,34 @@ public sealed class LinguaFormatBuilder
 
         _slots.Add(null);
         _sources.Add((observer => observable.Subscribe(new BoxingObserver<T>(observer)), _slots.Count - 1));
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a computed argument whose value is read on demand: once when the
+    /// built observable is first subscribed, and on every
+    /// <see cref="LinguaFormatObservable.Refresh"/>.
+    /// </summary>
+    /// <remarks>
+    /// Use this for plain properties (the source does not need to implement
+    /// <c>INotifyPropertyChanged</c>) or for values computed from external
+    /// state.  There are no change notifications — updates arrive only through
+    /// <see cref="LinguaFormatObservable.Refresh"/>.  For push-based sources,
+    /// prefer <see cref="Arg{T}(IObservable{T})"/>; for reactive properties,
+    /// prefer <see cref="Arg{TSource}(TSource, string, Func{TSource, object?})"/>.
+    /// </remarks>
+    /// <typeparam name="T">The result type of <paramref name="getter"/>; value-type results are boxed.</typeparam>
+    /// <param name="getter">
+    /// A delegate that computes or reads the argument value,
+    /// e.g. <c>() =&gt; plainModel.Total</c>.
+    /// </param>
+    public LinguaFormatBuilder Arg<T>(Func<T> getter)
+    {
+        ArgumentNullException.ThrowIfNull(getter);
+        ThrowIfBuilt();
+
+        _slots.Add(null);
+        _computed.Add((() => getter(), _slots.Count - 1));
         return this;
     }
 
@@ -133,7 +162,13 @@ public sealed class LinguaFormatBuilder
     /// frozen by this call; <see cref="Build"/> may be called repeatedly, each
     /// time producing an independent observable.
     /// </summary>
-    public IObservable<string?> Build()
+    /// <returns>
+    /// A <see cref="LinguaFormatObservable"/> — an
+    /// <see cref="IObservable{T}"/> of string with behavior-subject semantics
+    /// that additionally exposes <see cref="LinguaFormatObservable.Refresh"/>
+    /// for manually triggering a re-read and recompute.
+    /// </returns>
+    public LinguaFormatObservable Build()
     {
         _built = true;
         return new LinguaFormatObservable(
@@ -142,7 +177,8 @@ public sealed class LinguaFormatBuilder
             _subscribeCultureChanges,
             [.. _slots],
             [.. _sources],
-            [.. _properties]);
+            [.. _properties],
+            [.. _computed]);
     }
 
     private void ThrowIfBuilt()

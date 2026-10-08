@@ -282,13 +282,23 @@ public class MainWindowViewModel : INotifyPropertyChanged
 <TextBlock Text="{Binding PageText^}" />
 ```
 
-`Build()` 把链合成为最终的 `IObservable<string?>`。合成后的可观察对象具有 BehaviorSubject 语义：订阅时立即发出当前格式化结果，之后在以下任一情况发生时重新发出：格式模板变化（例如切换了文化）、任一活参数变化，或（自定义模板源时）manager 的当前文化变化。格式化始终使用 manager 的 `CurrentCulture`（而非线程 culture），因此即使模板文本回退到默认文化，数字和日期的格式也与所选语言保持一致。
+`Build()` 把链合成为最终的可观察对象（`LinguaFormatObservable`，它本身就是 `IObservable<string?>`），并额外提供 `Refresh()`：重读所有可拉取的参数（活属性与计算型读取器）、按 manager 当前 culture 重算、即使结果不变也强制通知订阅者——非常适合刷新按钮场景：
 
-`Arg` 有三个重载，对应三种参数：
+```csharp
+private readonly LinguaFormatObservable _stampText =
+    manager.CreateFormat("Total {0}").Arg(() => _service.GetLiveTotal()).Build();
+
+private void Refresh() => _stampText.Refresh();
+```
+
+可观察对象参数是纯推送的——`Refresh()` 不会重读它们；常量在构建时固化。合成后的可观察对象具有 BehaviorSubject 语义：订阅时立即发出当前格式化结果，之后在以下任一情况发生时重新发出：格式模板变化（例如切换了文化）、任一活参数变化，或（自定义模板源时）manager 的当前文化变化。格式化始终使用 manager 的 `CurrentCulture`（而非线程 culture），因此即使模板文本回退到默认文化，数字和日期的格式也与所选语言保持一致。
+
+`Arg` 有四个重载，对应四种参数：
 
 - `Arg(常量)` —— 固定值；
 - `Arg(可观察对象)` —— 任意 `IObservable<T>`；值类型（如 ReactiveUI 的 `WhenAnyValue`）自动装箱，无需适配；
-- `Arg(源, 属性名, 读取器)` —— 活属性：组合器直接订阅源的 `PropertyChanged` 事件并通过 getter 委托重新读取属性 —— 不使用反射、不使用表达式树，对裁剪和 NativeAOT 友好。属性被设置为相同值时不会重新发出（相同的格式化结果会被抑制），并支持 `PropertyChanged` 以空或 null 名称表示"所有属性可能已变化"的约定。
+- `Arg(源, 属性名, 读取器)` —— 活属性：组合器直接订阅源的 `PropertyChanged` 事件并通过 getter 委托重新读取属性 —— 不使用反射、不使用表达式树，对裁剪和 NativeAOT 友好。属性被设置为相同值时不会重新发出（相同的格式化结果会被抑制），并支持 `PropertyChanged` 以空或 null 名称表示"所有属性可能已变化"的约定；
+- `Arg(读取器)` —— 计算型、按需读取的值：首次订阅时读取一次，之后在每次 `Refresh()` 时重读。源不需要实现 `INotifyPropertyChanged`——适合普通属性或没有变更通知的外部状态。
 
 使用自定义或常量模板时，用 `CreateFormat` 从 manager 侧开始链：
 
