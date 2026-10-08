@@ -302,15 +302,6 @@ LinguaManager.Instance.CreateFormat("Page {0} of {1}")
 
 `CreateFormat` also accepts an `IObservable<string?>` template source (e.g. `LinguaObservableString.FromLiteral` or a template composed at runtime). For templates that come from the manager's own resources, prefer `Keys.X.CreateFormat()` — it avoids a redundant culture subscription.
 
-Avalonia properties join the chain through `GetObservable`, which returns the property's observable for both `StyledProperty`s and `DirectProperty`s:
-
-```csharp
-// TextBox.Text is a DirectProperty; a custom control's own DirectProperty works the same way
-LanguageManager.Keys.Page_Template.CreateFormat()
-    .Arg(textBox.GetObservable(TextBox.TextProperty))
-    .Build();
-```
-
 ### CulturePicker — built-in culture switcher
 
 `CulturePicker` is a `TemplatedControl` that provides a ready-to-use `ComboBox` for switching cultures.
