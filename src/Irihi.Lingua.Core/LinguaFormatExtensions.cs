@@ -27,8 +27,8 @@ public static class LinguaFormatExtensions
     /// <code>
     /// public IObservable&lt;string?&gt; PageText =&gt;
     ///     LanguageManager.Keys.Page_Template.Format()
-    ///         .Arg(this, nameof(Page), s =() =&gt; Page)gt; s.Page)
-    ///         .Arg(this, nameof(TotalPages), s =() =&gt; TotalPages)gt; s.TotalPages)
+    ///         .Arg(this, nameof(Page), s =&gt; s.Page)
+    ///         .Arg(this, nameof(TotalPages), s =&gt; s.TotalPages)
     ///         .Build();
     /// </code>
     /// </example>
@@ -55,7 +55,7 @@ public static class LinguaFormatExtensions
     }
 
     /// <summary>
-    /// Starts a format chain with a custom format-template source, using
+    /// Starts a format chain with a custom format-template observable, using
     /// <paramref name="manager"/>'s active culture for formatting.
     /// </summary>
     /// <param name="manager">
@@ -68,10 +68,15 @@ public static class LinguaFormatExtensions
     /// The format template source (e.g. a resource-key observable or
     /// <see cref="LinguaObservableString.FromLiteral"/> for a hard-coded template).
     /// </param>
+    /// <remarks>
+    /// For templates that come from the manager's own resources, prefer
+    /// <see cref="Format(LinguaKey)"/> — it starts from the template key and
+    /// avoids a redundant culture subscription.
+    /// </remarks>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="manager"/> or <paramref name="format"/> is <c>null</c>.
     /// </exception>
-    public static LinguaFormatBuilder Format(
+    public static LinguaFormatBuilder CreateFormat(
         this ILinguaManager manager,
         IObservable<string?> format)
     {
@@ -79,5 +84,38 @@ public static class LinguaFormatExtensions
         ArgumentNullException.ThrowIfNull(format);
 
         return new LinguaFormatBuilder(manager, format, subscribeCultureChanges: true);
+    }
+
+    /// <summary>
+    /// Starts a format chain with a constant format template, using
+    /// <paramref name="manager"/>'s active culture for formatting.
+    /// </summary>
+    /// <param name="manager">
+    /// The manager whose <see cref="ILinguaManager.CurrentCulture"/> is used for
+    /// formatting and whose <see cref="ILinguaManager.CultureChanges"/> stream
+    /// triggers recomputes.
+    /// </param>
+    /// <param name="format">The constant template, e.g. <c>"Page {0} of {1}"</c>.</param>
+    /// <example>
+    /// <code>
+    /// LinguaManager.Instance.CreateFormat("Page {0} of {1}")
+    ///     .Arg(this, nameof(Page), s =&gt; s.Page)
+    ///     .Build();
+    /// </code>
+    /// </example>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="manager"/> or <paramref name="format"/> is <c>null</c>.
+    /// </exception>
+    public static LinguaFormatBuilder CreateFormat(
+        this ILinguaManager manager,
+        string format)
+    {
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentNullException.ThrowIfNull(format);
+
+        return new LinguaFormatBuilder(
+            manager,
+            LinguaObservableString.FromLiteral(format),
+            subscribeCultureChanges: true);
     }
 }

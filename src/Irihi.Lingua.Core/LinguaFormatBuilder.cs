@@ -10,7 +10,8 @@ namespace Irihi.Lingua;
 /// <remarks>
 /// <para>
 /// Create a builder with <see cref="LinguaFormatExtensions.Format(LinguaKey)"/>
-/// (or the manager overload for a custom template source), add arguments with
+/// (or <see cref="LinguaFormatExtensions.CreateFormat(ILinguaManager, IObservable{string?})"/>
+/// for a custom template source), add arguments with
 /// the <see cref="Arg(object?)"/> overloads, and finish the chain with
 /// <see cref="Build"/>, which composes the final
 /// <see cref="IObservable{T}"/> of string.
@@ -19,8 +20,8 @@ namespace Irihi.Lingua;
 /// <code>
 /// public IObservable&lt;string?&gt; PageText =&gt;
 ///     LanguageManager.Keys.Page_Template.Format()
-///         .Arg(this, nameof(Page), s =() =&gt; Page)gt; s.Page)
-///         .Arg(this, nameof(TotalPages), s =() =&gt; TotalPages)gt; s.TotalPages)
+///         .Arg(this, nameof(Page), s =&gt; s.Page)
+///         .Arg(this, nameof(TotalPages), s =&gt; s.TotalPages)
 ///         .Build();
 /// </code>
 /// </example>

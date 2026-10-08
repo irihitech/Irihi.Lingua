@@ -292,13 +292,15 @@ Bind it in XAML like any other Lingua observable:
 - `Arg(observable)` — any `IObservable<T>`; value types (e.g. ReactiveUI's `WhenAnyValue`) are boxed automatically, no adaptation needed;
 - `Arg(source, propertyName, getter)` — a live property: the combiner subscribes the source's `PropertyChanged` event directly and re-reads the property through the getter delegate — no reflection, no expression trees, keeping it trimmer- and NativeAOT-friendly. Setting a property to its current value does not re-emit (identical formatted results are suppressed), and `PropertyChanged` events with an empty or `null` name are honored as "all properties may have changed".
 
-For a custom template source, start the chain from the manager instead:
+For a custom or constant template, start the chain from the manager with `CreateFormat` instead:
 
 ```csharp
-manager.Format(LinguaObservableString.FromLiteral("Page {0} of {1}"))
+LinguaManager.Instance.CreateFormat("Page {0} of {1}")
     .Arg(this, nameof(Page), s => s.Page)
     .Build();
 ```
+
+`CreateFormat` also accepts an `IObservable<string?>` template source (e.g. `LinguaObservableString.FromLiteral` or a template composed at runtime). For templates that come from the manager's own resources, prefer `Keys.X.Format()` — it avoids a redundant culture subscription.
 
 Avalonia properties join the chain through `GetObservable`, which returns the property's observable for both `StyledProperty`s and `DirectProperty`s:
 

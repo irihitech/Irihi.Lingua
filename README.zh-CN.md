@@ -290,13 +290,15 @@ public class MainWindowViewModel : INotifyPropertyChanged
 - `Arg(可观察对象)` —— 任意 `IObservable<T>`；值类型（如 ReactiveUI 的 `WhenAnyValue`）自动装箱，无需适配；
 - `Arg(源, 属性名, 读取器)` —— 活属性：组合器直接订阅源的 `PropertyChanged` 事件并通过 getter 委托重新读取属性 —— 不使用反射、不使用表达式树，对裁剪和 NativeAOT 友好。属性被设置为相同值时不会重新发出（相同的格式化结果会被抑制），并支持 `PropertyChanged` 以空或 null 名称表示"所有属性可能已变化"的约定。
 
-使用自定义模板源时，从 manager 侧开始链：
+使用自定义或常量模板时，用 `CreateFormat` 从 manager 侧开始链：
 
 ```csharp
-manager.Format(LinguaObservableString.FromLiteral("Page {0} of {1}"))
+LinguaManager.Instance.CreateFormat("Page {0} of {1}")
     .Arg(this, nameof(Page), s => s.Page)
     .Build();
 ```
+
+`CreateFormat` 也接受 `IObservable<string?>` 模板源（如 `LinguaObservableString.FromLiteral` 或运行时组合的模板）。模板来自 manager 自身资源时，优先用 `Keys.X.Format()`——它避免了一次冗余的 culture 订阅。
 
 Avalonia 属性通过 `GetObservable` 加入链式调用——`StyledProperty` 和 `DirectProperty` 都支持：
 

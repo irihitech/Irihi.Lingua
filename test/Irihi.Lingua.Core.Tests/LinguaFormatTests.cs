@@ -26,12 +26,12 @@ public class LinguaFormatTests
     }
 
     [Fact]
-    public void Format_ManagerOverload_WithLiteralTemplate_EmitsImmediately()
+    public void CreateFormat_ConstantTemplateString_EmitsImmediately()
     {
         var manager = CreateManager();
 
         var formatted = manager
-            .Format(LinguaObservableString.FromLiteral("Hello {0}"))
+            .CreateFormat("Hello {0}")
             .Arg("world");
         var received = new List<string?>();
         formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -94,7 +94,7 @@ public class LinguaFormatTests
         var manager = CreateManager();
 
         var formatted = manager
-            .Format(LinguaObservableString.FromLiteral("{0}: {1}"))
+            .CreateFormat("{0}: {1}")
             .Arg(manager.GetObservable("Name")!)
             .Arg(7);
         var received = new List<string?>();
@@ -163,7 +163,7 @@ public class LinguaFormatTests
             .Add(new CultureInfo("de-DE"), ("Name", "Seite"));
 
         var formatted = manager
-            .Format(LinguaObservableString.FromLiteral("Value: {0:F1}"))
+            .CreateFormat(LinguaObservableString.FromLiteral("Value: {0:F1}"))
             .Arg(1.5);
         var received = new List<string?>();
         formatted.Build().Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
@@ -184,7 +184,7 @@ public class LinguaFormatTests
         {
             var manager = CreateManager();
             var formatted = manager
-                .Format(LinguaObservableString.FromLiteral("Value: {0:F1}"))
+                .CreateFormat("Value: {0:F1}")
                 .Arg(1.5);
 
             var received = new List<string?>();
@@ -205,7 +205,7 @@ public class LinguaFormatTests
     {
         var manager = CreateManager();
         var formatted = manager
-            .Format(LinguaObservableString.FromLiteral(null))
+            .CreateFormat(LinguaObservableString.FromLiteral(null))
             .Arg("arg");
 
         var received = new List<string?>();
@@ -220,7 +220,7 @@ public class LinguaFormatTests
     {
         var manager = CreateManager();
         var formatted = manager
-            .Format(LinguaObservableString.FromLiteral("{0"))
+            .CreateFormat("{0")
             .Arg("arg");
 
         var received = new List<string?>();
@@ -374,17 +374,26 @@ public class LinguaFormatTests
     }
 
     [Fact]
-    public void Format_ManagerOverload_NullManager_ThrowsArgumentNullException()
+    public void CreateFormat_NullManager_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            LinguaFormatExtensions.Format(null!, LinguaObservableString.FromLiteral("x")));
+            LinguaFormatExtensions.CreateFormat(null!, LinguaObservableString.FromLiteral("x")));
+        Assert.Throws<ArgumentNullException>(() =>
+            LinguaFormatExtensions.CreateFormat(null!, "x"));
     }
 
     [Fact]
-    public void Format_ManagerOverload_NullFormat_ThrowsArgumentNullException()
+    public void CreateFormat_NullTemplateObservable_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            CreateManager().Format(null!));
+            CreateManager().CreateFormat((IObservable<string?>)null!));
+    }
+
+    [Fact]
+    public void CreateFormat_NullTemplateString_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            CreateManager().CreateFormat((string)null!));
     }
 
     [Fact]
