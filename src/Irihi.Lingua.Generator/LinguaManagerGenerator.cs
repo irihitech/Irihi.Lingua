@@ -568,6 +568,8 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
         sb.AppendLine("    private static global::Irihi.Lingua.LinguaRuntimeResources CreateStaticResources()");
         sb.AppendLine("    {");
         sb.AppendLine("        var _lingua_r = new global::Irihi.Lingua.LinguaRuntimeResources();");
+        sb.AppendLine("        _lingua_r.AddRange(new global::System.Collections.Generic.KeyValuePair<global::System.Globalization.CultureInfo, global::System.Collections.Generic.IReadOnlyDictionary<string, string>>[]");
+        sb.AppendLine("        {");
 
         foreach (var kvp in cultureData.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
         {
@@ -575,20 +577,21 @@ public sealed class LinguaManagerGenerator : IIncrementalGenerator
                 ? "global::System.Globalization.CultureInfo.InvariantCulture"
                 : $"new global::System.Globalization.CultureInfo(\"{EscapeString(kvp.Key)}\")";
 
-            sb.AppendLine($"        _lingua_r.Add({cultureKey}, new global::System.Collections.Generic.Dictionary<string, string>()");
-            sb.AppendLine("        {");
+            sb.AppendLine($"            new global::System.Collections.Generic.KeyValuePair<global::System.Globalization.CultureInfo, global::System.Collections.Generic.IReadOnlyDictionary<string, string>>({cultureKey}, new global::System.Collections.Generic.Dictionary<string, string>()");
+            sb.AppendLine("            {");
 
             foreach (var key in keys)
             {
                 if (kvp.Value.TryGetValue(key, out var value))
                 {
-                    sb.AppendLine($"            [\"{EscapeString(key)}\"] = @\"{EscapeVerbatimString(value)}\",");
+                    sb.AppendLine($"                [\"{EscapeString(key)}\"] = @\"{EscapeVerbatimString(value)}\",");
                 }
             }
 
-            sb.AppendLine("        });");
+            sb.AppendLine("            }),");
         }
 
+        sb.AppendLine("        });");
         sb.AppendLine("        return _lingua_r;");
         sb.AppendLine("    }");
         sb.AppendLine();

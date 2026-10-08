@@ -134,8 +134,10 @@ public class LinguaManagerJsonGeneratorTests : LinguaManagerGeneratorTestBase
             ("Strings.zh-Hans.json", ZhHansJsonContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        Assert.Contains("_lingua_r.Add(global::System.Globalization.CultureInfo.InvariantCulture,", source);
-        Assert.Contains("_lingua_r.Add(new global::System.Globalization.CultureInfo(\"zh-Hans\"),", source);
+        Assert.Equal(1, source.Split("_lingua_r.AddRange(").Length - 1);
+        Assert.DoesNotContain("_lingua_r.Add(", source);
+        Assert.Contains(">(global::System.Globalization.CultureInfo.InvariantCulture,", source);
+        Assert.Contains(">(new global::System.Globalization.CultureInfo(\"zh-Hans\"),", source);
     }
 
     [Fact]
@@ -226,11 +228,15 @@ public class LinguaManagerJsonGeneratorTests : LinguaManagerGeneratorTestBase
 
     // ── Generated API surface ────────────────────────────────────────────────
 
-    [Fact]
-    public void Generator_WithJson_GeneratedSourceCompilesWithoutErrors()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Generator_WithJson_GeneratedSourceCompilesWithoutErrors(bool includeCultureVariant)
     {
-        var (outputCompilation, _) = RunGeneratorWithCompilation(JsonInputSource,
-            ("Strings.json", NestedJsonContent));
+        var resourceFiles = includeCultureVariant
+            ? new[] { ("Strings.json", NestedJsonContent), ("Strings.zh-Hans.json", ZhHansJsonContent) }
+            : new[] { ("Strings.json", NestedJsonContent) };
+        var (outputCompilation, _) = RunGeneratorWithCompilation(JsonInputSource, resourceFiles);
 
         var errors = outputCompilation.GetDiagnostics(TestContext.Current.CancellationToken)
             .Where(d => d.Severity == DiagnosticSeverity.Error)

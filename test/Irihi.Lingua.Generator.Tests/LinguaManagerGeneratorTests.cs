@@ -266,9 +266,11 @@ public class LinguaManagerGeneratorTests : LinguaManagerGeneratorTestBase
             ("Strings.zh-Hans.resx", ZhHansResxContent));
 
         var source = result.GeneratedSources[0].SourceText.ToString();
-        // Both culture keys appear in _lingua_resources via Add calls
-        Assert.Contains("_lingua_r.Add(global::System.Globalization.CultureInfo.InvariantCulture,", source); // default culture
-        Assert.Contains("_lingua_r.Add(new global::System.Globalization.CultureInfo(\"zh-Hans\"),", source);  // zh-Hans culture
+        // Both culture keys appear in _lingua_resources via a single AddRange call
+        Assert.Equal(1, source.Split("_lingua_r.AddRange(").Length - 1);
+        Assert.DoesNotContain("_lingua_r.Add(", source);
+        Assert.Contains(">(global::System.Globalization.CultureInfo.InvariantCulture,", source); // default culture
+        Assert.Contains(">(new global::System.Globalization.CultureInfo(\"zh-Hans\"),", source);  // zh-Hans culture
     }
 
     [Fact]
@@ -433,11 +435,15 @@ public class LinguaManagerGeneratorTests : LinguaManagerGeneratorTestBase
 
     // ── Compilation verification ─────────────────────────────────────────────
 
-    [Fact]
-    public void Generator_GeneratedSource_CompilesWithoutErrors()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Generator_GeneratedSource_CompilesWithoutErrors(bool includeCultureVariant)
     {
-        var (outputCompilation, _) = RunGeneratorWithCompilation(InputSource,
-            ("Strings.resx", DefaultResxContent));
+        var resourceFiles = includeCultureVariant
+            ? new[] { ("Strings.resx", DefaultResxContent), ("Strings.zh-Hans.resx", ZhHansResxContent) }
+            : new[] { ("Strings.resx", DefaultResxContent) };
+        var (outputCompilation, _) = RunGeneratorWithCompilation(InputSource, resourceFiles);
 
         // Filter only errors (ignore warnings)
         var errors = outputCompilation.GetDiagnostics(TestContext.Current.CancellationToken)
