@@ -107,7 +107,6 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     {
         ArgumentNullException.ThrowIfNull(observer);
 
-        string initial;
         lock (_gate)
         {
             _observers = [.. _observers, observer];
@@ -123,15 +122,34 @@ public sealed class LinguaFormatObservable : IObservable<string?>
                 // emissions so the initial value is sent exactly once.
                 _attached = true;
                 _attaching = true;
-                Attach();
-                _attaching = false;
+                try
+                {
+                    Attach();
+                }
+                catch
+                {
+                    // A throwing source subscription or getter must not leave
+                    // the combiner half-attached: roll the state back so the
+                    // observer is not retained, partial source subscriptions
+                    // are disposed, and a later Subscribe can retry.
+                    DetachSources();
+                    _attached = false;
+                    _observers = RemoveOne(_observers, observer);
+                    throw;
+                }
+                finally
+                {
+                    _attaching = false;
+                }
             }
 
+            // Deliver the initial value while holding the gate so a concurrent
+            // source push cannot deliver a newer result first and make the
+            // stream move backwards.  Monitor reentrancy covers observers that
+            // resubscribe or dispose synchronously.
             _lastEmitted = ComputeCore();
-            initial = _lastEmitted;
+            observer.OnNext(_lastEmitted);
         }
-
-        observer.OnNext(initial);
 
         return new FormatSubscription(this, observer);
     }
@@ -291,38 +309,51 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
     internal void Unsubscribe(IObserver<string?> observer)
     {
-        IDisposable? formatSub;
-        IDisposable? cultureSub;
-        IDisposable[] argSubs;
-        PropertyChangedEventHandler? propertyHandler;
-
         lock (_gate)
         {
-            _observers = _observers.Where(o => !ReferenceEquals(o, observer)).ToArray();
+            // Remove only one occurrence: subscribing the same observer twice
+            // creates two independent registrations, and disposing either one
+            // must not cancel the other.
+            _observers = RemoveOne(_observers, observer);
             if (_observers.Length > 0 || !_attached)
                 return;
 
             _attached = false;
-            formatSub = _formatSubscription;
-            _formatSubscription = null;
-            cultureSub = _cultureSubscription;
-            _cultureSubscription = null;
-            argSubs = _argSubscriptions;
-            _argSubscriptions = [];
-            propertyHandler = _propertyHandler;
-            _propertyHandler = null;
         }
 
-        formatSub?.Dispose();
-        cultureSub?.Dispose();
-        foreach (var subscription in argSubs)
-            subscription?.Dispose();
+        DetachSources();
+    }
 
-        if (propertyHandler is not null)
+    /// <summary>Disposes every source subscription and unwires event handlers.</summary>
+    private void DetachSources()
+    {
+        _formatSubscription?.Dispose();
+        _formatSubscription = null;
+        _cultureSubscription?.Dispose();
+        _cultureSubscription = null;
+        foreach (var subscription in _argSubscriptions)
+            subscription?.Dispose();
+        _argSubscriptions = [];
+
+        if (_propertyHandler is not null)
         {
             foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
-                source.PropertyChanged -= propertyHandler;
+                source.PropertyChanged -= _propertyHandler;
+            _propertyHandler = null;
         }
+    }
+
+    /// <summary>Returns a copy of <paramref name="observers"/> without the first occurrence of <paramref name="observer"/>.</summary>
+    private static IObserver<string?>[] RemoveOne(IObserver<string?>[] observers, IObserver<string?> observer)
+    {
+        var index = Array.FindIndex(observers, o => ReferenceEquals(o, observer));
+        if (index < 0)
+            return observers;
+
+        var result = new IObserver<string?>[observers.Length - 1];
+        Array.Copy(observers, result, index);
+        Array.Copy(observers, index + 1, result, index, observers.Length - index - 1);
+        return result;
     }
 
     private sealed class FormatSubscription(LinguaFormatObservable parent, IObserver<string?> observer) : IDisposable

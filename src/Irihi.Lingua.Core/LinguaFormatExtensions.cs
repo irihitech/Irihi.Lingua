@@ -18,6 +18,17 @@ public static class LinguaFormatExtensions
     /// <paramref name="formatKey"/>.  Its manager supplies both the template
     /// text and the culture used for formatting.
     /// </summary>
+    /// <remarks>
+    /// The chain does not subscribe the manager's culture stream:
+    /// <c>UpdateCulture</c> pushes every key observable after switching the
+    /// culture, so the template push alone re-triggers the recompute.  One
+    /// boundary to know about: if a culture variant omits this key (reported
+    /// as <c>LINGUA002</c> at build time), switching culture does not push the
+    /// template and the number formatting for this entry stays on the previous
+    /// culture until the template next changes — call
+    /// <see cref="LinguaFormatObservable.Refresh"/> to force a recompute with
+    /// the current culture.
+    /// </remarks>
     /// <param name="formatKey">
     /// The <see cref="LinguaKey"/> of the format template (e.g.
     /// <c>LanguageManager.Keys.Page_Template</c> for a template like

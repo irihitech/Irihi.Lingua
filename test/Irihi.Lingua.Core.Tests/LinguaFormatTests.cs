@@ -527,6 +527,46 @@ public class LinguaFormatTests
         return weak;
     }
 
+    [Fact]
+    public void Format_SourceSubscriptionThrowsDuringAttach_StateIsRolledBackAndRetryWorks()
+    {
+        var manager = CreateManager();
+        var flaky = new FlakyObservable(failures: 1);
+
+        var formatted = manager.Keys("Fmt").CreateFormat().Arg(flaky).Arg(10).Build();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            formatted.Subscribe(new DelegateObserver<string?>(_ => { })));
+
+        // the failed attachment was rolled back: subscribing again attaches
+        // from scratch and works
+        var received = new List<string?>();
+        formatted.Subscribe(new DelegateObserver<string?>(v => received.Add(v)));
+
+        var single = Assert.Single(received);
+        Assert.Equal("Page 5 of 10", single);
+    }
+
+    [Fact]
+    public void Format_SameObserverSubscribedTwice_DisposingOneKeepsTheOther()
+    {
+        var manager = CreateManager();
+        var page = new LinguaObservable<int>("page", 1);
+
+        var formatted = manager.Keys("Fmt").CreateFormat().Arg(page).Arg(10).Build();
+        var received = new List<string?>();
+        var observer = new DelegateObserver<string?>(v => received.Add(v));
+        var subscription1 = formatted.Subscribe(observer);
+        var subscription2 = formatted.Subscribe(observer);
+
+        subscription1.Dispose();
+        page.OnNext(2); // one live registration remains
+
+        Assert.Equal(new[] { "Page 1 of 10", "Page 1 of 10", "Page 2 of 10" }, received);
+
+        subscription2.Dispose();
+    }
+
     // ── Argument validation ──────────────────────────────────────────────────
 
     [Fact]
@@ -703,5 +743,25 @@ public class LinguaFormatTests
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 
         public int Value { get; set; }
+    }
+
+    /// <summary>An observable whose first Subscribe calls throw.</summary>
+    private sealed class FlakyObservable(int failures) : IObservable<int>
+    {
+        private int _failuresLeft = failures;
+
+        public IDisposable Subscribe(IObserver<int> observer)
+        {
+            if (_failuresLeft-- > 0)
+                throw new InvalidOperationException("boom");
+
+            observer.OnNext(5);
+            return new NoopDisposable();
+        }
+    }
+
+    private sealed class NoopDisposable : IDisposable
+    {
+        public void Dispose() { }
     }
 }
