@@ -257,6 +257,59 @@ xmlns:local="using:YourAppNamespace"
 在这个示例中，`{0}` 来自 `#page.Value`，`{1}` 来自 `Greeting_Message`。
 当当前文化变化，或任意参数绑定值变化时，最终文本都会自动重新计算。
 
+格式化使用所属 manager 的当前文化（通过内部附加的绑定传给转换器），因此数字和日期参数会跟随所选语言，而不是线程文化。
+
+### 在 C# 代码中格式化（`Format`）
+
+`FormatTranslate` 在代码侧的对应物是流式的 `Format` 构建器：从格式模板键开始，用 `Arg` 逐个链上参数：
+
+```csharp
+public class MainWindowViewModel : INotifyPropertyChanged
+{
+    // Page 与 TotalPages 会触发 PropertyChanged ...
+
+    public IObservable<string?> PageText =>
+        LanguageManager.Keys.Page_Template.CreateFormat()
+            .Arg(this, nameof(Page), s => s.Page)
+            .Arg(this, nameof(TotalPages), s => s.TotalPages)
+            .Build();
+}
+```
+
+在 XAML 中像其他 Lingua 可观察对象一样绑定：
+
+```xml
+<TextBlock Text="{Binding PageText^}" />
+```
+
+`Build()` 把链合成为最终的可观察对象（`LinguaFormatObservable`，它本身就是 `IObservable<string?>`），并额外提供 `Refresh()`：重读所有可拉取的参数（活属性与计算型读取器）、按 manager 当前 culture 重算、即使结果不变也强制通知订阅者——非常适合刷新按钮场景：
+
+```csharp
+private readonly LinguaFormatObservable _stampText =
+    manager.CreateFormat("Total {0}").Arg(() => _service.GetLiveTotal()).Build();
+
+private void Refresh() => _stampText.Refresh();
+```
+
+可观察对象参数是纯推送的——`Refresh()` 不会重读它们；常量在构建时固化。合成后的可观察对象具有 BehaviorSubject 语义：订阅时立即发出当前格式化结果，之后在以下任一情况发生时重新发出：格式模板变化（例如切换了文化）、任一活参数变化，或（自定义模板源时）manager 的当前文化变化。格式化始终使用 manager 的 `CurrentCulture`（而非线程 culture），因此即使模板文本回退到默认文化，数字和日期的格式也与所选语言保持一致。
+
+`Arg` 有四个重载，对应四种参数：
+
+- `Arg(常量)` —— 固定值；
+- `Arg(可观察对象)` —— 任意 `IObservable<T>`；值类型（如 ReactiveUI 的 `WhenAnyValue`）自动装箱，无需适配；
+- `Arg(源, 属性名, 读取器)` —— 活属性：组合器直接订阅源的 `PropertyChanged` 事件并通过 getter 委托重新读取属性 —— 不使用反射、不使用表达式树，对裁剪和 NativeAOT 友好。属性被设置为相同值时不会重新发出（相同的格式化结果会被抑制），并支持 `PropertyChanged` 以空或 null 名称表示"所有属性可能已变化"的约定；
+- `Arg(读取器)` —— 计算型、按需读取的值：首次订阅时读取一次，之后在每次 `Refresh()` 时重读。源不需要实现 `INotifyPropertyChanged`——适合普通属性或没有变更通知的外部状态。
+
+使用自定义或常量模板时，用 `CreateFormat` 从 manager 侧开始链：
+
+```csharp
+LinguaManager.Instance.CreateFormat("Page {0} of {1}")
+    .Arg(this, nameof(Page), s => s.Page)
+    .Build();
+```
+
+`CreateFormat` 也接受 `IObservable<string?>` 模板源（如 `LinguaObservableString.FromLiteral` 或运行时组合的模板）。模板来自 manager 自身资源时，优先用 `Keys.X.CreateFormat()`——它避免了一次冗余的 culture 订阅。
+
 ### CulturePicker — 内置文化切换控件
 
 `CulturePicker` 是一个 `TemplatedControl`，提供开箱即用的 `ComboBox` 用于切换文化。

@@ -104,15 +104,33 @@
             <StackPanel Spacing="8">
                 <TextBlock Text="FormatTranslate (RESX)" FontSize="14" FontWeight="Bold"
                            Foreground="DodgerBlue" />
-                <NumericUpDown Width="200" Name="page" Value="1" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Width="96" Name="page" Value="1" />
+                    <NumericUpDown Width="96" Name="totalPages" Value="10" />
+                </StackPanel>
                 <TextBlock>
                     <TextBlock.Text>
                         <FormatTranslate FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
                             <TranslateEntry Binding="{Binding #page.Value}" />
-                            <TranslateEntry Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
+                            <TranslateEntry Binding="{Binding #totalPages.Value}" />
                         </FormatTranslate>
                     </TextBlock.Text>
                 </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ Format from C# code demo ═══ -->
+        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Format (C# — chained builder)" FontSize="14" FontWeight="Bold"
+                           Foreground="DodgerBlue" />
+                <TextBlock Text="Same template, consumed from the ViewModel."
+                           FontSize="11" Foreground="Gray" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Width="96" Value="{Binding Page}" Minimum="1" />
+                    <NumericUpDown Width="96" Value="{Binding TotalPages}" Minimum="1" />
+                </StackPanel>
+                <TextBlock Text="{Binding PageText^}" FontSize="14" />
             </StackPanel>
         </Border>
 

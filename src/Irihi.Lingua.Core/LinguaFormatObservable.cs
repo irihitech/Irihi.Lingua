@@ -1,0 +1,393 @@
+using System.ComponentModel;
+using System.Globalization;
+
+namespace Irihi.Lingua;
+
+/// <summary>
+/// Combines a localized format-template observable, zero or more argument
+/// sources and a manager's culture stream into a single observable string.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This is the code-side counterpart of the XAML <c>FormatTranslate</c> markup
+/// extension.  It behaves like a behavior subject: subscribing immediately
+/// emits the formatted result computed from the current values, and every
+/// subsequent change re-emits a recomputed string.  A recompute is triggered
+/// by any of the following events:
+/// </para>
+/// <list type="bullet">
+///   <item>The format-template observable pushes a new template.</item>
+///   <item>Any dynamic argument observable pushes a new value.</item>
+///   <item>The owning manager's <see cref="ILinguaManager.CultureChanges"/>
+///   pushes a new culture — but only when <c>subscribeCultureChanges</c> was
+///   requested.  When the format template is a manager key observable (the
+///   <c>LinguaKey</c>-based <c>Format</c> overload), this subscription is
+///   redundant: <c>UpdateCulture</c> pushes every key observable after
+///   switching <c>CurrentCulture</c>, so the template push alone carries the
+///   culture change.  It is only needed for custom template sources (e.g.
+///   <see cref="LinguaObservableString.FromLiteral"/>) that never react to
+///   culture changes on their own.</item>
+/// </list>
+/// <para>
+/// Formatting always uses <see cref="ILinguaManager.CurrentCulture"/> of the
+/// owning manager, never the current thread culture, so that formatted values
+/// stay consistent with the language selected through the manager.
+/// </para>
+/// <para>
+/// Source subscriptions are reference-counted: the sources are subscribed when
+/// the first observer subscribes and unsubscribed when the last observer
+/// disposes, so an unused combined observable does not keep itself alive via
+/// long-lived manager observables.
+/// </para>
+/// </remarks>
+public sealed class LinguaFormatObservable : IObservable<string?>
+{
+    private readonly ILinguaManager _manager;
+    private readonly IObservable<string?> _format;
+    private readonly bool _subscribeCultureChanges;
+    private readonly object?[] _currentArgs;
+    private readonly (Func<IObserver<object?>, IDisposable> Subscribe, int Index)[] _sourceArgs;
+    private readonly (PropertyChange Change, int Index)[] _propertyArgs;
+    private readonly (Func<object?> Read, int Index)[] _computedArgs;
+
+    // Monitor rather than System.Threading.Lock: attaching subscribes sources
+    // while holding the gate, and the resulting same-thread synchronous
+    // callbacks must be able to reenter it.
+    private readonly object _gate = new();
+
+    private volatile IObserver<string?>[] _observers = [];
+    private bool _attached;
+    private volatile bool _attaching;
+    private string? _currentFormat;
+    private string? _lastEmitted;
+    private IDisposable? _formatSubscription;
+    private IDisposable? _cultureSubscription;
+    private IDisposable[] _argSubscriptions = [];
+    private PropertyChangedEventHandler? _propertyHandler;
+
+    /// <summary>
+    /// Initializes the combined observable with pre-classified arguments.
+    /// Constants sit in <paramref name="initialArgs"/> at their positions;
+    /// observable, live-property and computed arguments are supplied separately
+    /// with their argument indices.  Creation is internal — use a
+    /// <see cref="LinguaFormatBuilder"/> chain ending in
+    /// <see cref="LinguaFormatBuilder.Build"/>.
+    /// </summary>
+    /// <param name="subscribeCultureChanges">
+    /// Pass <c>false</c> when the format template is a manager key observable —
+    /// <c>UpdateCulture</c> pushes every key observable, so the template push
+    /// alone re-triggers the recompute on culture changes.  Pass <c>true</c>
+    /// (the default, and the safe choice for custom template sources) to also
+    /// subscribe the manager's <see cref="ILinguaManager.CultureChanges"/> stream.
+    /// </param>
+    internal LinguaFormatObservable(
+        ILinguaManager manager,
+        IObservable<string?> format,
+        bool subscribeCultureChanges,
+        object?[] initialArgs,
+        (Func<IObserver<object?>, IDisposable> Subscribe, int Index)[] sources,
+        (PropertyChange Change, int Index)[] properties,
+        (Func<object?> Read, int Index)[] computedArgs)
+    {
+        _manager = manager;
+        _format = format;
+        _subscribeCultureChanges = subscribeCultureChanges;
+        _currentArgs = initialArgs;
+        _sourceArgs = sources;
+        _propertyArgs = properties;
+        _computedArgs = computedArgs;
+    }
+
+    /// <summary>
+    /// Subscribes an observer.  The observer immediately receives the result
+    /// formatted from the current template, arguments and culture, then every
+    /// recomputed value.
+    /// </summary>
+    public IDisposable Subscribe(IObserver<string?> observer)
+    {
+        ArgumentNullException.ThrowIfNull(observer);
+
+        lock (_gate)
+        {
+            _observers = [.. _observers, observer];
+            if (!_attached)
+            {
+                // Attach runs while holding the gate so concurrent subscribers
+                // cannot observe half-initialized snapshots.  Source callbacks
+                // fire synchronously inside Subscribe and reenter the gate
+                // (Monitor is reentrant on the same thread); cross-thread
+                // pushes block until attachment completes, so their emit
+                // decision is made after the initial emission.  The
+                // _attaching flag only suppresses the same-thread priming
+                // emissions so the initial value is sent exactly once.
+                _attached = true;
+                _attaching = true;
+                try
+                {
+                    Attach();
+                }
+                catch
+                {
+                    // A throwing source subscription or getter must not leave
+                    // the combiner half-attached: roll the state back so the
+                    // observer is not retained, partial source subscriptions
+                    // are disposed, and a later Subscribe can retry.
+                    DetachSources();
+                    _attached = false;
+                    _observers = RemoveOne(_observers, observer);
+                    throw;
+                }
+                finally
+                {
+                    _attaching = false;
+                }
+            }
+
+            // Deliver the initial value while holding the gate so a concurrent
+            // source push cannot deliver a newer result first and make the
+            // stream move backwards.  Monitor reentrancy covers observers that
+            // resubscribe or dispose synchronously.
+            _lastEmitted = ComputeCore();
+            observer.OnNext(_lastEmitted);
+        }
+
+        return new FormatSubscription(this, observer);
+    }
+
+    private void Attach()
+    {
+        _formatSubscription = _format.Subscribe(new FormatObserver(this));
+
+        _argSubscriptions = new IDisposable[_sourceArgs.Length];
+        for (var i = 0; i < _sourceArgs.Length; i++)
+        {
+            _argSubscriptions[i] = _sourceArgs[i].Subscribe(new ArgObserver(this, _sourceArgs[i].Index));
+        }
+
+        if (_subscribeCultureChanges)
+        {
+            _cultureSubscription = _manager.CultureChanges.Subscribe(new CultureObserver(this));
+        }
+
+        if (_propertyArgs.Length > 0 || _computedArgs.Length > 0)
+        {
+            // Prime the property and computed snapshots before wiring events
+            // so the initial emission reflects the current values.  The caller
+            // (Subscribe) holds the gate.
+            foreach (var (change, index) in _propertyArgs)
+                _currentArgs[index] = change.Getter();
+            foreach (var (read, index) in _computedArgs)
+                _currentArgs[index] = read();
+
+            if (_propertyArgs.Length > 0)
+            {
+                _propertyHandler = (_, e) => OnPropertyChanged(e);
+                foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
+                    source.PropertyChanged += _propertyHandler;
+            }
+        }
+    }
+
+    private void OnFormatValue(string? value)
+    {
+        lock (_gate)
+        {
+            _currentFormat = value;
+        }
+
+        EmitIfChanged();
+    }
+
+    private void OnArgValue(int index, object? value)
+    {
+        lock (_gate)
+        {
+            _currentArgs[index] = value;
+        }
+
+        EmitIfChanged();
+    }
+
+    private void OnCultureChanged()
+    {
+        EmitIfChanged();
+    }
+
+    private void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        // A null/empty property name means "any property may have changed".
+        var wildcard = string.IsNullOrEmpty(e.PropertyName);
+
+        lock (_gate)
+        {
+            foreach (var (change, index) in _propertyArgs)
+            {
+                if (!wildcard && e.PropertyName != change.PropertyName)
+                    continue;
+
+                _currentArgs[index] = change.Getter();
+            }
+        }
+
+        EmitIfChanged();
+    }
+
+    private void EmitIfChanged()
+    {
+        IObserver<string?>[] observers;
+        string result;
+        lock (_gate)
+        {
+            if (_attaching || _observers.Length == 0)
+                return;
+
+            result = ComputeCore();
+            // Safety net: a source may push without producing a new output
+            // (e.g. a property set to its current value). Suppress identical
+            // consecutive emissions so observers only see real changes.
+            if (result == _lastEmitted)
+                return;
+
+            _lastEmitted = result;
+            observers = _observers;
+        }
+
+        foreach (var observer in observers)
+            observer.OnNext(result);
+    }
+
+    /// <summary>
+    /// Forces a refresh: re-reads every pull-based argument (live-property
+    /// getters and computed getters), recomputes the formatted string with the
+    /// manager's active culture, and notifies current subscribers even when
+    /// the result is unchanged.
+    /// </summary>
+    /// <remarks>
+    /// Observable arguments are push-only — <c>Refresh</c> does not (and
+    /// cannot) re-read them; their values only arrive through their own
+    /// notifications.  Constants are fixed at build time.  Calling
+    /// <c>Refresh</c> while nobody is subscribed is safe: the snapshots are
+    /// still refreshed and the next subscriber receives the up-to-date value.
+    /// </remarks>
+    public void Refresh()
+    {
+        IObserver<string?>[] observers;
+        string result;
+        lock (_gate)
+        {
+            foreach (var (change, index) in _propertyArgs)
+                _currentArgs[index] = change.Getter();
+            foreach (var (read, index) in _computedArgs)
+                _currentArgs[index] = read();
+
+            result = ComputeCore();
+            _lastEmitted = result;
+            observers = _observers;
+        }
+
+        foreach (var observer in observers)
+            observer.OnNext(result);
+    }
+
+    private string ComputeCore()
+    {
+        var format = _currentFormat;
+        if (string.IsNullOrEmpty(format))
+            return string.Empty;
+
+        try
+        {
+            return string.Format(_manager.CurrentCulture, format, _currentArgs);
+        }
+        catch (FormatException)
+        {
+            // Malformed template — surface the raw template instead of
+            // throwing inside the observer pipeline.
+            return format;
+        }
+    }
+
+    internal void Unsubscribe(IObserver<string?> observer)
+    {
+        lock (_gate)
+        {
+            // Remove only one occurrence: subscribing the same observer twice
+            // creates two independent registrations, and disposing either one
+            // must not cancel the other.
+            _observers = RemoveOne(_observers, observer);
+            if (_observers.Length > 0 || !_attached)
+                return;
+
+            // Detach under the gate, symmetric with Attach: releasing the lock
+            // first would let a concurrent Subscribe re-attach and overwrite
+            // the subscription fields before this thread disposes them
+            // (killing the new subscriptions and leaking the old ones).
+            _attached = false;
+            DetachSources();
+        }
+    }
+
+    /// <summary>Disposes every source subscription and unwires event handlers.</summary>
+    private void DetachSources()
+    {
+        _formatSubscription?.Dispose();
+        _formatSubscription = null;
+        _cultureSubscription?.Dispose();
+        _cultureSubscription = null;
+        foreach (var subscription in _argSubscriptions)
+            subscription?.Dispose();
+        _argSubscriptions = [];
+
+        if (_propertyHandler is not null)
+        {
+            foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
+                source.PropertyChanged -= _propertyHandler;
+            _propertyHandler = null;
+        }
+    }
+
+    /// <summary>Returns a copy of <paramref name="observers"/> without the first occurrence of <paramref name="observer"/>.</summary>
+    private static IObserver<string?>[] RemoveOne(IObserver<string?>[] observers, IObserver<string?> observer)
+    {
+        var index = Array.FindIndex(observers, o => ReferenceEquals(o, observer));
+        if (index < 0)
+            return observers;
+
+        var result = new IObserver<string?>[observers.Length - 1];
+        Array.Copy(observers, result, index);
+        Array.Copy(observers, index + 1, result, index, observers.Length - index - 1);
+        return result;
+    }
+
+    private sealed class FormatSubscription(LinguaFormatObservable parent, IObserver<string?> observer) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+                parent.Unsubscribe(observer);
+        }
+    }
+
+    private sealed class FormatObserver(LinguaFormatObservable parent) : IObserver<string?>
+    {
+        public void OnCompleted() { }
+        public void OnError(Exception error) { }
+        public void OnNext(string? value) => parent.OnFormatValue(value);
+    }
+
+    private sealed class ArgObserver(LinguaFormatObservable parent, int argIndex) : IObserver<object?>
+    {
+        public void OnCompleted() { }
+        public void OnError(Exception error) { }
+        public void OnNext(object? value) => parent.OnArgValue(argIndex, value);
+    }
+
+    private sealed class CultureObserver(LinguaFormatObservable parent) : IObserver<CultureInfo>
+    {
+        public void OnCompleted() { }
+        public void OnError(Exception error) { }
+        public void OnNext(CultureInfo value) => parent.OnCultureChanged();
+    }
+}

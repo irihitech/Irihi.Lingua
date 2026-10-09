@@ -259,6 +259,59 @@ Use `FormatTranslateExtension` (or `FormatTranslate` in XAML) when the resource 
 In this example, `{0}` is filled by `#page.Value` and `{1}` is filled by `Greeting_Message`.
 When either the current culture changes or any bound argument value changes, the final text is recomputed automatically.
 
+Formatting uses the owning manager's active culture (passed to the converter through an internal trailing binding), so number and date arguments follow the selected language rather than the thread culture.
+
+### `Format` from C# code
+
+`FormatTranslate`'s counterpart for ViewModel code is the fluent `Format` builder. It starts from a format-template key and chains arguments with `Arg`:
+
+```csharp
+public class MainWindowViewModel : INotifyPropertyChanged
+{
+    // Page and TotalPages raise PropertyChanged ...
+
+    public IObservable<string?> PageText =>
+        LanguageManager.Keys.Page_Template.CreateFormat()
+            .Arg(this, nameof(Page), s => s.Page)
+            .Arg(this, nameof(TotalPages), s => s.TotalPages)
+            .Build();
+}
+```
+
+Bind it in XAML like any other Lingua observable:
+
+```xml
+<TextBlock Text="{Binding PageText^}" />
+```
+
+`Build()` composes the chain into the final observable (a `LinguaFormatObservable`, itself an `IObservable<string?>`), which additionally exposes `Refresh()`: it re-reads every pull-based argument (live properties and computed getters), recomputes with the manager's current culture, and notifies subscribers even when the result is unchanged — handy for a refresh button:
+
+```csharp
+private readonly LinguaFormatObservable _stampText =
+    manager.CreateFormat("Total {0}").Arg(() => _service.GetLiveTotal()).Build();
+
+private void Refresh() => _stampText.Refresh();
+```
+
+Observable arguments are push-only — `Refresh()` does not re-read them; constants are fixed at build time. The built observable behaves like a behavior subject: subscribing immediately emits the current formatted string, and every subsequent change re-emits a recomputed value — whenever the format template changes (e.g. because the active culture changed), whenever a live argument changes, or (for custom template sources) whenever the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
+
+`Arg` has four overloads, one per argument kind:
+
+- `Arg(constant)` — a fixed value;
+- `Arg(observable)` — any `IObservable<T>`; value types (e.g. ReactiveUI's `WhenAnyValue`) are boxed automatically, no adaptation needed;
+- `Arg(source, propertyName, getter)` — a live property: the combiner subscribes the source's `PropertyChanged` event directly and re-reads the property through the getter delegate — no reflection, no expression trees, keeping it trimmer- and NativeAOT-friendly. Setting a property to its current value does not re-emit (identical formatted results are suppressed), and `PropertyChanged` events with an empty or `null` name are honored as "all properties may have changed";
+- `Arg(getter)` — a computed, read-on-demand value: read once on first subscription and on every `Refresh()`. The source does not need to implement `INotifyPropertyChanged` — use it for plain properties or external state without change notifications.
+
+For a custom or constant template, start the chain from the manager with `CreateFormat` instead:
+
+```csharp
+LinguaManager.Instance.CreateFormat("Page {0} of {1}")
+    .Arg(this, nameof(Page), s => s.Page)
+    .Build();
+```
+
+`CreateFormat` also accepts an `IObservable<string?>` template source (e.g. `LinguaObservableString.FromLiteral` or a template composed at runtime). For templates that come from the manager's own resources, prefer `Keys.X.CreateFormat()` — it avoids a redundant culture subscription.
+
 ### CulturePicker — built-in culture switcher
 
 `CulturePicker` is a `TemplatedControl` that provides a ready-to-use `ComboBox` for switching cultures.

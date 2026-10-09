@@ -79,6 +79,26 @@ public partial class MainWindowViewModel : ObservableObject
         JsonLanguageManager.Instance.UpdateCulture(culture);
     }
 
+    // ── C#-side format demo ──────────────────────────────────────────────────
+
+    [ObservableProperty]
+    private int _page = 1;
+
+    [ObservableProperty]
+    private int _totalPages = 10;
+
+    /// <summary>
+    /// The code-side counterpart of the XAML <c>FormatTranslate</c> demo above:
+    /// the formatted string re-emits whenever either property changes and
+    /// whenever the active culture changes, using the manager's culture for
+    /// number/date formatting.
+    /// </summary>
+    public IObservable<string?> PageText =>
+        LanguageManager.Keys.Page_Template.CreateFormat()
+            .Arg(this, nameof(Page), s => s.Page)
+            .Arg(this, nameof(TotalPages), s => s.TotalPages)
+            .Build();
+
     // ── Helper ───────────────────────────────────────────────────────────────
 
     private sealed class DelegateObserver<T>(Action<T> onNext) : IObserver<T>

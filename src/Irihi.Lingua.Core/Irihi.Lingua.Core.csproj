@@ -23,6 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Irihi.Lingua.Core.Tests" />
+    <InternalsVisibleTo Include="Irihi.Lingua.Avalonia.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Reference the generator project; PrivateAssets="all" prevents it from flowing as a package dependency -->
     <ProjectReference Include="..\Irihi.Lingua.Generator\Irihi.Lingua.Generator.csproj"
                       PrivateAssets="all"
