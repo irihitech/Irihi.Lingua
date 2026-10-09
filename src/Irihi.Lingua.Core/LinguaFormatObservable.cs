@@ -50,11 +50,10 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     private readonly (PropertyChange Change, int Index)[] _propertyArgs;
     private readonly (Func<object?> Read, int Index)[] _computedArgs;
 
-#if NET9_0_OR_GREATER
-    private readonly Lock _gate = new();
-#else
+    // Monitor rather than System.Threading.Lock: attaching subscribes sources
+    // while holding the gate, and the resulting same-thread synchronous
+    // callbacks must be able to reenter it.
     private readonly object _gate = new();
-#endif
 
     private volatile IObserver<string?>[] _observers = [];
     private bool _attached;
@@ -116,9 +115,12 @@ public sealed class LinguaFormatObservable : IObservable<string?>
             {
                 // Attach runs while holding the gate so concurrent subscribers
                 // cannot observe half-initialized snapshots.  Source callbacks
-                // fire synchronously inside Subscribe and take the lock-free
-                // priming path while _attaching is set, so this cannot
-                // deadlock on the gate.
+                // fire synchronously inside Subscribe and reenter the gate
+                // (Monitor is reentrant on the same thread); cross-thread
+                // pushes block until attachment completes, so their emit
+                // decision is made after the initial emission.  The
+                // _attaching flag only suppresses the same-thread priming
+                // emissions so the initial value is sent exactly once.
                 _attached = true;
                 _attaching = true;
                 Attach();
@@ -170,14 +172,6 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
     private void OnFormatValue(string? value)
     {
-        if (_attaching)
-        {
-            // Called synchronously from Attach while the gate is held — the
-            // gate already provides mutual exclusion, just record the snapshot.
-            _currentFormat = value;
-            return;
-        }
-
         lock (_gate)
         {
             _currentFormat = value;
@@ -188,13 +182,6 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
     private void OnArgValue(int index, object? value)
     {
-        if (_attaching)
-        {
-            // See OnFormatValue: the gate is held by the attaching subscriber.
-            _currentArgs[index] = value;
-            return;
-        }
-
         lock (_gate)
         {
             _currentArgs[index] = value;
@@ -205,8 +192,6 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
     private void OnCultureChanged()
     {
-        if (_attaching) return; // culture is read at compute time anyway
-
         EmitIfChanged();
     }
 
@@ -214,19 +199,6 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     {
         // A null/empty property name means "any property may have changed".
         var wildcard = string.IsNullOrEmpty(e.PropertyName);
-
-        if (_attaching)
-        {
-            // See OnFormatValue: the gate is held by the attaching subscriber.
-            foreach (var (change, index) in _propertyArgs)
-            {
-                if (!wildcard && e.PropertyName != change.PropertyName)
-                    continue;
-
-                _currentArgs[index] = change.Getter();
-            }
-            return;
-        }
 
         lock (_gate)
         {

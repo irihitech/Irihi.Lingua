@@ -602,6 +602,32 @@ public class LinguaFormatTests
     }
 
     [Fact]
+    public async Task Format_ConcurrentPushesDuringSubscribe_AreNeverLost()
+    {
+        // Regression guard for the attaching window: a cross-thread push that
+        // starts while the first subscriber is attaching must still produce an
+        // emission once attachment completes — its emit decision is made under
+        // the gate, after the initial emission.
+        var manager = CreateManager();
+        var page = new LinguaObservable<int>("page", 0);
+        var formatted = manager.Keys("Fmt").CreateFormat().Arg(page).Arg(10).Build();
+
+        var received = new System.Collections.Concurrent.ConcurrentQueue<string?>();
+        var pusher = Task.Run(() =>
+        {
+            for (var i = 1; i <= 1000; i++)
+                page.OnNext(i);
+        });
+
+        // subscribe while pushes are in flight, and stay subscribed
+        await Task.Yield();
+        formatted.Subscribe(new DelegateObserver<string?>(v => received.Enqueue(v)));
+        await pusher;
+
+        Assert.Equal("Page 1000 of 10", received.Last());
+    }
+
+    [Fact]
     public async Task Format_ConcurrentSubscribeUpdateDispose_DoesNotThrow()
     {
         var manager = CreateManager();
