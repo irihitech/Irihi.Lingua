@@ -318,10 +318,13 @@ public sealed class LinguaFormatObservable : IObservable<string?>
             if (_observers.Length > 0 || !_attached)
                 return;
 
+            // Detach under the gate, symmetric with Attach: releasing the lock
+            // first would let a concurrent Subscribe re-attach and overwrite
+            // the subscription fields before this thread disposes them
+            // (killing the new subscriptions and leaking the old ones).
             _attached = false;
+            DetachSources();
         }
-
-        DetachSources();
     }
 
     /// <summary>Disposes every source subscription and unwires event handlers.</summary>
