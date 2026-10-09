@@ -58,7 +58,7 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
     private volatile IObserver<string?>[] _observers = [];
     private bool _attached;
-    private bool _attaching;
+    private volatile bool _attaching;
     private string? _currentFormat;
     private string? _lastEmitted;
     private IDisposable? _formatSubscription;
@@ -108,39 +108,28 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     {
         ArgumentNullException.ThrowIfNull(observer);
 
-        bool becameFirst;
+        string initial;
         lock (_gate)
         {
             _observers = [.. _observers, observer];
-            becameFirst = !_attached;
-            if (becameFirst)
+            if (!_attached)
             {
+                // Attach runs while holding the gate so concurrent subscribers
+                // cannot observe half-initialized snapshots.  Source callbacks
+                // fire synchronously inside Subscribe and take the lock-free
+                // priming path while _attaching is set, so this cannot
+                // deadlock on the gate.
                 _attached = true;
                 _attaching = true;
-            }
-        }
-
-        if (becameFirst)
-        {
-            // Subscribing a LinguaObservable pushes its current value
-            // synchronously; those pushes only prime the snapshots while
-            // _attaching is set, so the initial emission below happens
-            // exactly once.
-            Attach();
-            string initial;
-            lock (_gate)
-            {
+                Attach();
                 _attaching = false;
-                _lastEmitted = ComputeCore();
-                initial = _lastEmitted;
             }
 
-            observer.OnNext(initial);
+            _lastEmitted = ComputeCore();
+            initial = _lastEmitted;
         }
-        else
-        {
-            observer.OnNext(ComputeCurrent());
-        }
+
+        observer.OnNext(initial);
 
         return new FormatSubscription(this, observer);
     }
@@ -163,14 +152,12 @@ public sealed class LinguaFormatObservable : IObservable<string?>
         if (_propertyArgs.Length > 0 || _computedArgs.Length > 0)
         {
             // Prime the property and computed snapshots before wiring events
-            // so the initial emission reflects the current values.
-            lock (_gate)
-            {
-                foreach (var (change, index) in _propertyArgs)
-                    _currentArgs[index] = change.Getter();
-                foreach (var (read, index) in _computedArgs)
-                    _currentArgs[index] = read();
-            }
+            // so the initial emission reflects the current values.  The caller
+            // (Subscribe) holds the gate.
+            foreach (var (change, index) in _propertyArgs)
+                _currentArgs[index] = change.Getter();
+            foreach (var (read, index) in _computedArgs)
+                _currentArgs[index] = read();
 
             if (_propertyArgs.Length > 0)
             {
@@ -183,6 +170,14 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
     private void OnFormatValue(string? value)
     {
+        if (_attaching)
+        {
+            // Called synchronously from Attach while the gate is held — the
+            // gate already provides mutual exclusion, just record the snapshot.
+            _currentFormat = value;
+            return;
+        }
+
         lock (_gate)
         {
             _currentFormat = value;
@@ -193,6 +188,13 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
     private void OnArgValue(int index, object? value)
     {
+        if (_attaching)
+        {
+            // See OnFormatValue: the gate is held by the attaching subscriber.
+            _currentArgs[index] = value;
+            return;
+        }
+
         lock (_gate)
         {
             _currentArgs[index] = value;
@@ -203,6 +205,8 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
     private void OnCultureChanged()
     {
+        if (_attaching) return; // culture is read at compute time anyway
+
         EmitIfChanged();
     }
 
@@ -210,6 +214,19 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     {
         // A null/empty property name means "any property may have changed".
         var wildcard = string.IsNullOrEmpty(e.PropertyName);
+
+        if (_attaching)
+        {
+            // See OnFormatValue: the gate is held by the attaching subscriber.
+            foreach (var (change, index) in _propertyArgs)
+            {
+                if (!wildcard && e.PropertyName != change.PropertyName)
+                    continue;
+
+                _currentArgs[index] = change.Getter();
+            }
+            return;
+        }
 
         lock (_gate)
         {
@@ -280,14 +297,6 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
         foreach (var observer in observers)
             observer.OnNext(result);
-    }
-
-    private string ComputeCurrent()
-    {
-        lock (_gate)
-        {
-            return ComputeCore();
-        }
     }
 
     private string ComputeCore()

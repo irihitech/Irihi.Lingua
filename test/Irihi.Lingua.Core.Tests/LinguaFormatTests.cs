@@ -578,6 +578,30 @@ public class LinguaFormatTests
     // ── Thread safety smoke test ─────────────────────────────────────────────
 
     [Fact]
+    public async Task Format_ConcurrentFirstSubscriptions_AllReceiveCompleteInitialValue()
+    {
+        // Regression guard: a subscriber arriving while the first one is still
+        // attaching must not observe half-initialized snapshots.
+        var manager = CreateManager();
+        var page = new LinguaObservable<int>("page", 1);
+        var formatted = manager.Keys("Fmt").CreateFormat().Arg(page).Arg(10).Build();
+
+        var first = new System.Collections.Concurrent.ConcurrentQueue<string?>();
+        var barrier = new System.Threading.Barrier(8);
+        var tasks = Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+        {
+            barrier.SignalAndWait();
+            formatted.Subscribe(new DelegateObserver<string?>(v => first.Enqueue(v)));
+        }));
+
+        await Task.WhenAll(tasks);
+
+        // every subscriber's initial emission must be the complete value
+        Assert.Equal(8, first.Count);
+        Assert.All(first, v => Assert.Equal("Page 1 of 10", v));
+    }
+
+    [Fact]
     public async Task Format_ConcurrentSubscribeUpdateDispose_DoesNotThrow()
     {
         var manager = CreateManager();

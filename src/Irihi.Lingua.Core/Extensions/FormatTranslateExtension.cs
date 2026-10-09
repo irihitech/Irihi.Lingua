@@ -15,10 +15,12 @@ public sealed class FormatTranslateExtension : MarkupExtension
     /// default <see cref="FormatTranslateConverter"/>.
     /// </summary>
     /// <remarks>
-    /// When this extension builds the <see cref="MultiBinding"/>, the first value
-    /// passed to the converter is the format template and the <b>last</b> value is
-    /// the owning manager's active <see cref="System.Globalization.CultureInfo"/>.
-    /// Custom converters receive that trailing culture value as well.
+    /// A custom converter receives the same input shape as before this
+    /// extension learned about cultures: the format template first, then one
+    /// value per <see cref="TranslateEntry"/>.  Only the built-in converter is
+    /// fed the trailing <c>CultureSignal</c> carrying the manager's active
+    /// culture; custom converters that want culture awareness can bind the
+    /// manager's <c>CultureChanges</c> themselves.
     /// </remarks>
     public IMultiValueConverter? Converter { get; set; }
 
@@ -56,11 +58,17 @@ public sealed class FormatTranslateExtension : MarkupExtension
             }
         }
 
-        // The trailing binding feeds the converter the manager's active culture,
-        // so that (a) number/date formatting follows the language selected
-        // through the manager instead of the thread culture, and (b) culture
-        // switches re-evaluate the MultiBinding.
-        bindings.Add(formatKey.Manager.CultureChanges.ToBinding());
+        // The trailing binding feeds the built-in converter the manager's active
+        // culture (as an internal CultureSignal, distinct from any user-supplied
+        // CultureInfo argument), so that number/date formatting follows the
+        // language selected through the manager instead of the thread culture,
+        // and culture switches re-evaluate the MultiBinding.  Custom converters
+        // keep the pre-culture input shape (template + entries).
+        var useBuiltinConverter = Converter is null or FormatTranslateConverter;
+        if (useBuiltinConverter)
+        {
+            bindings.Add(new CultureSignalAdapter(formatKey.Manager.CultureChanges).ToBinding());
+        }
 
         return new MultiBinding
         {

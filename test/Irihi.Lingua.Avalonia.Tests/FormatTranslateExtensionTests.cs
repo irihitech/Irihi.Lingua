@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
+using Avalonia.Data.Converters;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Irihi.Lingua.Avalonia.Tests.ViewModels;
@@ -164,10 +165,38 @@ public class FormatTranslateExtensionTests
         Assert.Equal(binding.Bindings[0].GetType(), binding.Bindings[^1].GetType());
     }
 
+    [Fact]
+    public void LocalizeFormat_ProvideValue_CustomConverter_KeepsLegacyInputShape()
+    {
+        // Custom converters keep the pre-culture contract: template + entries,
+        // no trailing culture binding.
+        var extension = new FormatTranslateExtension
+        {
+            FormatKey = TestLanguageManager.Keys.Format_Template,
+            Converter = new PassthroughMultiConverter(),
+            Items =
+            [
+                new TranslateEntry { Key = TestLanguageManager.Keys.Greeting_Message },
+                new TranslateEntry()
+            ]
+        };
+
+        var binding = Assert.IsType<MultiBinding>(extension.ProvideValue(null!));
+
+        Assert.Equal(3, binding.Bindings.Count); // format template + 2 entries
+        Assert.IsType<PassthroughMultiConverter>(binding.Converter);
+    }
+
+    private sealed class PassthroughMultiConverter : IMultiValueConverter
+    {
+        public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture) =>
+            string.Join("|", values);
+    }
+
     [AvaloniaFact]
     public void LocalizeFormat_NumberFormatting_FollowsManagerCultureInsteadOfThreadCulture()
     {
-        // An isolated manager keeps this test free of shared-singleion state
+        // An isolated manager keeps this test free of shared-singleton state
         // so it can safely run in parallel with the other test classes.
         var manager = new MiniManager()
             .Add(CultureInfo.InvariantCulture, ("NumberTemplate", "Value: {0:F1}"))
