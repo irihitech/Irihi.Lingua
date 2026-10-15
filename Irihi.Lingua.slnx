@@ -9,6 +9,7 @@
     <Project Path="src/Irihi.Lingua.Generator/Irihi.Lingua.Generator.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/Irihi.Lingua.AotSmoke/Irihi.Lingua.AotSmoke.csproj" />
     <Project Path="test/Irihi.Lingua.Core.Tests/Irihi.Lingua.Core.Tests.csproj" />
     <Project Path="test/Irihi.Lingua.Generator.Tests/Irihi.Lingua.Generator.Tests.csproj" />
     <Project Path="test/Irihi.Lingua.Avalonia.Tests/Irihi.Lingua.Avalonia.Tests.csproj" />

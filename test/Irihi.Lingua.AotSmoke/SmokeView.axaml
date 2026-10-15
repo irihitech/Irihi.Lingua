@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:AotSmoke"
+             xmlns:lingua="using:Irihi.Lingua.Extensions"
+             x:Class="AotSmoke.SmokeView"
+             x:DataType="local:SmokeModel">
+  <StackPanel>
+    <TextBlock x:Name="XamlResult">
+      <TextBlock.Text>
+        <lingua:FormatTranslate FormatKey="{x:Static local:SmokeManager+Keys.NumberTemplate}">
+          <lingua:TranslateEntry Binding="{Binding Value}" />
+        </lingua:FormatTranslate>
+      </TextBlock.Text>
+    </TextBlock>
+    <TextBlock x:Name="CodeResult" Text="{Binding Formatted^}" />
+  </StackPanel>
+</UserControl>

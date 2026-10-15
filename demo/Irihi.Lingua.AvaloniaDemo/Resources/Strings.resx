@@ -10,6 +10,6 @@
     <value>Switch to Chinese</value>
   </data>
   <data name="Page_Template" xml:space="preserve">
-    <value>Page {0} {1}</value>
+    <value>Page {0} of {1}</value>
   </data>
 </root>

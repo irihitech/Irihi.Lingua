@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <PublishAot>true</PublishAot>
+    <IsTestProject>false</IsTestProject>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+    <ILLinkTreatWarningsAsErrors>true</ILLinkTreatWarningsAsErrors>
+    <IlcTreatWarningsAsErrors>true</IlcTreatWarningsAsErrors>
+    <!-- The partial culture variant deliberately tests missing template keys. -->
+    <NoWarn>$(NoWarn);LINGUA002</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="12.0.3" />
+    <ProjectReference Include="..\..\src\Irihi.Lingua.Core\Irihi.Lingua.Core.csproj" />
+    <ProjectReference Include="..\..\src\Irihi.Lingua.Generator\Irihi.Lingua.Generator.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="Resources\*.resx" />
+    <AdditionalFiles Include="Resources\*.json" />
+    <!-- Analyze every library entry point, including paths not called below. -->
+    <TrimmerRootAssembly Include="Irihi.Lingua.Core" />
+  </ItemGroup>
+</Project>
