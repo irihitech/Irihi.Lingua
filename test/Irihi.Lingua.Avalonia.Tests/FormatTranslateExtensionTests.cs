@@ -165,6 +165,28 @@ public class FormatTranslateExtensionTests
         Assert.Equal(binding.Bindings[0].GetType(), binding.Bindings[^1].GetType());
     }
 
+    [AvaloniaFact]
+    public void LocalizeFormat_MissingArguments_UseUnsetValueWithoutReadingDataContext()
+    {
+        var manager = new MiniManager().Add(CultureInfo.InvariantCulture, ("Fmt", "Value: {0}"));
+        foreach (var missingKey in new[] { false, true })
+        {
+            var extension = new FormatTranslateExtension
+            {
+                FormatKey = new LinguaKey("Fmt", manager),
+                Items = [missingKey
+                    ? new TranslateEntry { Key = new LinguaKey("Missing", manager) }
+                    : new TranslateEntry()]
+            };
+            var textBlock = new TextBlock { DataContext = new object() };
+            using var subscription = textBlock.Bind(TextBlock.TextProperty,
+                Assert.IsType<MultiBinding>(extension.ProvideValue(null!)));
+
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Value: (unset)", textBlock.Text);
+        }
+    }
+
     [Fact]
     public void LocalizeFormat_ProvideValue_CustomConverter_KeepsLegacyInputShape()
     {

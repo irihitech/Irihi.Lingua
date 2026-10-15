@@ -13,7 +13,7 @@ Irihi.Lingua 是一个 C# 源生成器，可以将 `.resx` 或 `.json` 资源文
 
 ## 亮点
 
-- 支持 NativeAOT。
+- 支持 NativeAOT（[原生可执行文件验证](test/Irihi.Lingua.AotSmoke/README.md)）。
 - 为 Avalonia 设计并优化。
 - 可同时在 XAML 和 ViewModel 中使用。
 - 去中心化的 i18n 管理方式：你可以在不同的类中定义独立的资源管理器，并按功能、模块、页面或任意你希望的边界来划分资源粒度。

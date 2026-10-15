@@ -46,7 +46,7 @@ public sealed class FormatTranslateExtension : MarkupExtension
             {
                 var observable = item.Key.Manager.GetObservable(item.Key.Key);
                 if (observable is not null) bindings.Add(observable.ToBinding());
-                else bindings.Add(new Binding { Source = null });
+                else bindings.Add(CreateUnsetBinding());
             }
             else if (item.Binding is not null)
             {
@@ -54,7 +54,7 @@ public sealed class FormatTranslateExtension : MarkupExtension
             }
             else
             {
-                bindings.Add(new Binding { Source = null });
+                bindings.Add(CreateUnsetBinding());
             }
         }
 
@@ -76,4 +76,7 @@ public sealed class FormatTranslateExtension : MarkupExtension
             Bindings = bindings
         };
     }
+
+    private static BindingBase CreateUnsetBinding() =>
+        new LinguaObservable<object?>(string.Empty, AvaloniaProperty.UnsetValue).ToBinding();
 }

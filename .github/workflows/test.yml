@@ -12,6 +12,38 @@ permissions:
   pull-requests: write
 
 jobs:
+  native-aot:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        framework: [net8.0, net10.0]
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Publish NativeAOT smoke executable
+        run: dotnet publish test/Irihi.Lingua.AotSmoke/Irihi.Lingua.AotSmoke.csproj -c Release -f ${{ matrix.framework }} -r ${{ matrix.rid }} -o artifacts/aot-smoke
+      - name: Run NativeAOT smoke checks
+        shell: pwsh
+        run: |
+          if ($IsWindows) {
+            & ./artifacts/aot-smoke/Irihi.Lingua.AotSmoke.exe
+          } else {
+            & ./artifacts/aot-smoke/Irihi.Lingua.AotSmoke
+          }
+          exit $LASTEXITCODE
+
   windows:
     runs-on: windows-latest
     steps:

@@ -13,7 +13,7 @@ Special thanks to [`sylinko/everywhere`](https://github.com/sylinko/everywhere) 
 
 ## Highlights
 
-- NativeAOT-compatible.
+- NativeAOT-compatible ([native smoke checks](test/Irihi.Lingua.AotSmoke/README.md)).
 - Designed and optimized for Avalonia.
 - Usable from both XAML and ViewModel code.
 - Decentralized i18n managers: define separate resource managers in different classes and choose the granularity that fits your app — per feature, module, screen, or any other boundary you prefer.
