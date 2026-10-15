@@ -19,14 +19,8 @@ namespace Irihi.Lingua;
 ///   <item>The format-template observable pushes a new template.</item>
 ///   <item>Any dynamic argument observable pushes a new value.</item>
 ///   <item>The owning manager's <see cref="ILinguaManager.CultureChanges"/>
-///   pushes a new culture — but only when <c>subscribeCultureChanges</c> was
-///   requested.  When the format template is a manager key observable (the
-///   <c>LinguaKey</c>-based <c>Format</c> overload), this subscription is
-///   redundant: <c>UpdateCulture</c> pushes every key observable after
-///   switching <c>CurrentCulture</c>, so the template push alone carries the
-///   culture change.  It is only needed for custom template sources (e.g.
-///   <see cref="LinguaObservableString.FromLiteral"/>) that never react to
-///   culture changes on their own.</item>
+///   pushes a new culture, even if the selected resource variant omits the
+///   template key and does not push a new template.</item>
 /// </list>
 /// <para>
 /// Formatting always uses <see cref="ILinguaManager.CurrentCulture"/> of the
@@ -39,12 +33,15 @@ namespace Irihi.Lingua;
 /// disposes, so an unused combined observable does not keep itself alive via
 /// long-lived manager observables.
 /// </para>
+/// <para>
+/// Notifications are serialized. Updates and subscriptions initiated from an
+/// observer callback are queued until the current notification completes.
+/// </para>
 /// </remarks>
 public sealed class LinguaFormatObservable : IObservable<string?>
 {
     private readonly ILinguaManager _manager;
     private readonly IObservable<string?> _format;
-    private readonly bool _subscribeCultureChanges;
     private readonly object?[] _currentArgs;
     private readonly (Func<IObserver<object?>, IDisposable> Subscribe, int Index)[] _sourceArgs;
     private readonly (PropertyChange Change, int Index)[] _propertyArgs;
@@ -54,10 +51,12 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     // while holding the gate, and the resulting same-thread synchronous
     // callbacks must be able to reenter it.
     private readonly object _gate = new();
+    private readonly Queue<(FormatSubscription[] Observers, string Value)> _notifications = new();
 
-    private volatile IObserver<string?>[] _observers = [];
+    private FormatSubscription[] _observers = [];
     private bool _attached;
-    private volatile bool _attaching;
+    private bool _attaching;
+    private bool _notifying;
     private string? _currentFormat;
     private string? _lastEmitted;
     private IDisposable? _formatSubscription;
@@ -73,17 +72,9 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     /// <see cref="LinguaFormatBuilder"/> chain ending in
     /// <see cref="LinguaFormatBuilder.Build"/>.
     /// </summary>
-    /// <param name="subscribeCultureChanges">
-    /// Pass <c>false</c> when the format template is a manager key observable —
-    /// <c>UpdateCulture</c> pushes every key observable, so the template push
-    /// alone re-triggers the recompute on culture changes.  Pass <c>true</c>
-    /// (the default, and the safe choice for custom template sources) to also
-    /// subscribe the manager's <see cref="ILinguaManager.CultureChanges"/> stream.
-    /// </param>
     internal LinguaFormatObservable(
         ILinguaManager manager,
         IObservable<string?> format,
-        bool subscribeCultureChanges,
         object?[] initialArgs,
         (Func<IObserver<object?>, IDisposable> Subscribe, int Index)[] sources,
         (PropertyChange Change, int Index)[] properties,
@@ -91,7 +82,6 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     {
         _manager = manager;
         _format = format;
-        _subscribeCultureChanges = subscribeCultureChanges;
         _currentArgs = initialArgs;
         _sourceArgs = sources;
         _propertyArgs = properties;
@@ -103,13 +93,18 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     /// formatted from the current template, arguments and culture, then every
     /// recomputed value.
     /// </summary>
+    /// <remarks>
+    /// Subscriptions made from an observer callback receive their initial value
+    /// after the current notification completes.
+    /// </remarks>
     public IDisposable Subscribe(IObserver<string?> observer)
     {
         ArgumentNullException.ThrowIfNull(observer);
+        var subscription = new FormatSubscription(this, observer);
 
         lock (_gate)
         {
-            _observers = [.. _observers, observer];
+            _observers = [.. _observers, subscription];
             if (!_attached)
             {
                 // Attach runs while holding the gate so concurrent subscribers
@@ -134,7 +129,7 @@ public sealed class LinguaFormatObservable : IObservable<string?>
                     // are disposed, and a later Subscribe can retry.
                     DetachSources();
                     _attached = false;
-                    _observers = RemoveOne(_observers, observer);
+                    _observers = RemoveOne(_observers, subscription);
                     throw;
                 }
                 finally
@@ -143,15 +138,20 @@ public sealed class LinguaFormatObservable : IObservable<string?>
                 }
             }
 
-            // Deliver the initial value while holding the gate so a concurrent
-            // source push cannot deliver a newer result first and make the
-            // stream move backwards.  Monitor reentrancy covers observers that
-            // resubscribe or dispose synchronously.
+            // Serialize the initial value with all subsequent notifications.
             _lastEmitted = ComputeCore();
-            observer.OnNext(_lastEmitted);
+            try
+            {
+                NotifyCore([subscription], _lastEmitted);
+            }
+            catch
+            {
+                subscription.Dispose();
+                throw;
+            }
         }
 
-        return new FormatSubscription(this, observer);
+        return subscription;
     }
 
     private void Attach()
@@ -164,27 +164,26 @@ public sealed class LinguaFormatObservable : IObservable<string?>
             _argSubscriptions[i] = _sourceArgs[i].Subscribe(new ArgObserver(this, _sourceArgs[i].Index));
         }
 
-        if (_subscribeCultureChanges)
-        {
-            _cultureSubscription = _manager.CultureChanges.Subscribe(new CultureObserver(this));
-        }
+        _cultureSubscription = _manager.CultureChanges.Subscribe(new CultureObserver(this));
 
         if (_propertyArgs.Length > 0 || _computedArgs.Length > 0)
         {
-            // Prime the property and computed snapshots before wiring events
-            // so the initial emission reflects the current values.  The caller
-            // (Subscribe) holds the gate.
+            // Wire events before reading snapshots so a concurrent change
+            // cannot fall between the initial read and event registration.
+            // The caller holds the gate; callbacks from another thread wait
+            // until the initial emission has completed.
+            if (_propertyArgs.Length > 0)
+            {
+                _propertyHandler = OnPropertyChanged;
+                foreach (var source in _propertyArgs.Select(p => p.Change.Source)
+                             .Distinct<INotifyPropertyChanged>(ReferenceEqualityComparer.Instance))
+                    source.PropertyChanged += _propertyHandler;
+            }
+
             foreach (var (change, index) in _propertyArgs)
                 _currentArgs[index] = change.Getter();
             foreach (var (read, index) in _computedArgs)
                 _currentArgs[index] = read();
-
-            if (_propertyArgs.Length > 0)
-            {
-                _propertyHandler = (_, e) => OnPropertyChanged(e);
-                foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
-                    source.PropertyChanged += _propertyHandler;
-            }
         }
     }
 
@@ -193,9 +192,8 @@ public sealed class LinguaFormatObservable : IObservable<string?>
         lock (_gate)
         {
             _currentFormat = value;
+            EmitIfChangedCore();
         }
-
-        EmitIfChanged();
     }
 
     private void OnArgValue(int index, object? value)
@@ -203,17 +201,19 @@ public sealed class LinguaFormatObservable : IObservable<string?>
         lock (_gate)
         {
             _currentArgs[index] = value;
+            EmitIfChangedCore();
         }
-
-        EmitIfChanged();
     }
 
     private void OnCultureChanged()
     {
-        EmitIfChanged();
+        lock (_gate)
+        {
+            EmitIfChangedCore();
+        }
     }
 
-    private void OnPropertyChanged(PropertyChangedEventArgs e)
+    private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         // A null/empty property name means "any property may have changed".
         var wildcard = string.IsNullOrEmpty(e.PropertyName);
@@ -222,38 +222,58 @@ public sealed class LinguaFormatObservable : IObservable<string?>
         {
             foreach (var (change, index) in _propertyArgs)
             {
-                if (!wildcard && e.PropertyName != change.PropertyName)
+                if (!ReferenceEquals(sender, change.Source) ||
+                    (!wildcard && e.PropertyName != change.PropertyName))
                     continue;
 
                 _currentArgs[index] = change.Getter();
             }
-        }
 
-        EmitIfChanged();
+            EmitIfChangedCore();
+        }
     }
 
-    private void EmitIfChanged()
+    // The caller holds _gate through snapshot updates, computation and delivery.
+    private void EmitIfChangedCore()
     {
-        IObserver<string?>[] observers;
-        string result;
-        lock (_gate)
+        if (_attaching || _observers.Length == 0)
+            return;
+
+        var result = ComputeCore();
+        // A culture switch can push both the culture and the template. Suppress
+        // identical results, as well as argument updates that leave text unchanged.
+        if (result == _lastEmitted)
+            return;
+
+        _lastEmitted = result;
+        NotifyCore(_observers, result);
+    }
+
+    private void NotifyCore(FormatSubscription[] observers, string value)
+    {
+        if (observers.Length == 0)
+            return;
+
+        _notifications.Enqueue((observers, value));
+        if (_notifying)
+            return;
+
+        // Monitor blocks concurrent pushes. The queue also handles same-thread
+        // reentrancy: finish notifying every observer before sending the next value.
+        _notifying = true;
+        try
         {
-            if (_attaching || _observers.Length == 0)
-                return;
-
-            result = ComputeCore();
-            // Safety net: a source may push without producing a new output
-            // (e.g. a property set to its current value). Suppress identical
-            // consecutive emissions so observers only see real changes.
-            if (result == _lastEmitted)
-                return;
-
-            _lastEmitted = result;
-            observers = _observers;
+            while (_notifications.TryDequeue(out var notification))
+            {
+                foreach (var observer in notification.Observers)
+                    observer.OnNext(notification.Value);
+            }
         }
-
-        foreach (var observer in observers)
-            observer.OnNext(result);
+        finally
+        {
+            _notifying = false;
+            _notifications.Clear();
+        }
     }
 
     /// <summary>
@@ -271,8 +291,6 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     /// </remarks>
     public void Refresh()
     {
-        IObserver<string?>[] observers;
-        string result;
         lock (_gate)
         {
             foreach (var (change, index) in _propertyArgs)
@@ -280,13 +298,10 @@ public sealed class LinguaFormatObservable : IObservable<string?>
             foreach (var (read, index) in _computedArgs)
                 _currentArgs[index] = read();
 
-            result = ComputeCore();
+            var result = ComputeCore();
             _lastEmitted = result;
-            observers = _observers;
+            NotifyCore(_observers, result);
         }
-
-        foreach (var observer in observers)
-            observer.OnNext(result);
     }
 
     private string ComputeCore()
@@ -307,7 +322,7 @@ public sealed class LinguaFormatObservable : IObservable<string?>
         }
     }
 
-    internal void Unsubscribe(IObserver<string?> observer)
+    private void Unsubscribe(FormatSubscription observer)
     {
         lock (_gate)
         {
@@ -340,20 +355,21 @@ public sealed class LinguaFormatObservable : IObservable<string?>
 
         if (_propertyHandler is not null)
         {
-            foreach (var source in _propertyArgs.Select(p => p.Change.Source).Distinct())
+            foreach (var source in _propertyArgs.Select(p => p.Change.Source)
+                         .Distinct<INotifyPropertyChanged>(ReferenceEqualityComparer.Instance))
                 source.PropertyChanged -= _propertyHandler;
             _propertyHandler = null;
         }
     }
 
     /// <summary>Returns a copy of <paramref name="observers"/> without the first occurrence of <paramref name="observer"/>.</summary>
-    private static IObserver<string?>[] RemoveOne(IObserver<string?>[] observers, IObserver<string?> observer)
+    private static FormatSubscription[] RemoveOne(FormatSubscription[] observers, FormatSubscription observer)
     {
         var index = Array.FindIndex(observers, o => ReferenceEquals(o, observer));
         if (index < 0)
             return observers;
 
-        var result = new IObserver<string?>[observers.Length - 1];
+        var result = new FormatSubscription[observers.Length - 1];
         Array.Copy(observers, result, index);
         Array.Copy(observers, index + 1, result, index, observers.Length - index - 1);
         return result;
@@ -363,10 +379,16 @@ public sealed class LinguaFormatObservable : IObservable<string?>
     {
         private int _disposed;
 
+        public void OnNext(string value)
+        {
+            if (Volatile.Read(ref _disposed) == 0)
+                observer.OnNext(value);
+        }
+
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _disposed, 1) == 0)
-                parent.Unsubscribe(observer);
+                parent.Unsubscribe(this);
         }
     }
 

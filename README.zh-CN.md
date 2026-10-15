@@ -291,7 +291,7 @@ private readonly LinguaFormatObservable _stampText =
 private void Refresh() => _stampText.Refresh();
 ```
 
-可观察对象参数是纯推送的——`Refresh()` 不会重读它们；常量在构建时固化。合成后的可观察对象具有 BehaviorSubject 语义：订阅时立即发出当前格式化结果，之后在以下任一情况发生时重新发出：格式模板变化（例如切换了文化）、任一活参数变化，或（自定义模板源时）manager 的当前文化变化。格式化始终使用 manager 的 `CurrentCulture`（而非线程 culture），因此即使模板文本回退到默认文化，数字和日期的格式也与所选语言保持一致。
+可观察对象参数是纯推送的——`Refresh()` 不会重读它们；常量在构建时固化。合成后的可观察对象具有 BehaviorSubject 语义：订阅时立即发出当前格式化结果，之后在以下任一情况发生时重新发出：格式模板变化、任一活参数变化，或 manager 的当前文化变化。格式化使用 manager 的 `CurrentCulture`，因此即使资源变体缺少模板键，数字和日期的格式也会跟随所选语言。通知按顺序串行发送；在观察者回调中触发的更新和新订阅，会在当前通知完成后送达。
 
 `Arg` 有四个重载，对应四种参数：
 
@@ -308,7 +308,7 @@ LinguaManager.Instance.CreateFormat("Page {0} of {1}")
     .Build();
 ```
 
-`CreateFormat` 也接受 `IObservable<string?>` 模板源（如 `LinguaObservableString.FromLiteral` 或运行时组合的模板）。模板来自 manager 自身资源时，优先用 `Keys.X.CreateFormat()`——它避免了一次冗余的 culture 订阅。
+`CreateFormat` 也接受 `IObservable<string?>` 模板源（如 `LinguaObservableString.FromLiteral` 或运行时组合的模板）。模板来自 manager 自身资源时，可用 `Keys.X.CreateFormat()` 直接从资源键开始。
 
 ### CulturePicker — 内置文化切换控件
 

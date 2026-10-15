@@ -30,8 +30,8 @@ namespace Irihi.Lingua;
 /// immediately emits the formatted result computed from the current values,
 /// and every subsequent change re-emits a recomputed string.  A recompute is
 /// triggered whenever the format template changes (e.g. because the active
-/// culture changed), whenever one of the dynamic arguments changes, and — for
-/// custom template sources — whenever the manager's active culture changes.
+/// culture changed), whenever one of the dynamic arguments changes, and
+/// whenever the manager's active culture changes.
 /// Formatting always uses the owning manager's
 /// <see cref="ILinguaManager.CurrentCulture"/> rather than the thread culture,
 /// so numbers and dates stay consistent with the selected language.
@@ -46,7 +46,6 @@ public sealed class LinguaFormatBuilder
 {
     private readonly ILinguaManager _manager;
     private readonly IObservable<string?> _format;
-    private readonly bool _subscribeCultureChanges;
     private readonly List<object?> _slots = [];
     private readonly List<(Func<IObserver<object?>, IDisposable> Subscribe, int Index)> _sources = [];
     private readonly List<(PropertyChange Change, int Index)> _properties = [];
@@ -56,12 +55,10 @@ public sealed class LinguaFormatBuilder
 
     internal LinguaFormatBuilder(
         ILinguaManager manager,
-        IObservable<string?> format,
-        bool subscribeCultureChanges)
+        IObservable<string?> format)
     {
         _manager = manager;
         _format = format;
-        _subscribeCultureChanges = subscribeCultureChanges;
     }
 
     /// <summary>
@@ -174,7 +171,6 @@ public sealed class LinguaFormatBuilder
         return new LinguaFormatObservable(
             _manager,
             _format,
-            _subscribeCultureChanges,
             [.. _slots],
             [.. _sources],
             [.. _properties],

@@ -19,15 +19,9 @@ public static class LinguaFormatExtensions
     /// text and the culture used for formatting.
     /// </summary>
     /// <remarks>
-    /// The chain does not subscribe the manager's culture stream:
-    /// <c>UpdateCulture</c> pushes every key observable after switching the
-    /// culture, so the template push alone re-triggers the recompute.  One
-    /// boundary to know about: if a culture variant omits this key (reported
-    /// as <c>LINGUA002</c> at build time), switching culture does not push the
-    /// template and the number formatting for this entry stays on the previous
-    /// culture until the template next changes — call
-    /// <see cref="LinguaFormatObservable.Refresh"/> to force a recompute with
-    /// the current culture.
+    /// The chain subscribes the manager's culture stream as well as the template
+    /// so number and date formatting updates even when a culture variant omits
+    /// this key and does not push a new template. Identical outputs are suppressed.
     /// </remarks>
     /// <param name="formatKey">
     /// The <see cref="LinguaKey"/> of the format template (e.g.
@@ -59,10 +53,7 @@ public static class LinguaFormatExtensions
                 $"The manager does not contain an observable for the resource key '{formatKey.Key}'.",
                 nameof(formatKey));
 
-        // No CultureChanges subscription: UpdateCulture pushes every key
-        // observable after switching CurrentCulture, so the template push
-        // alone re-triggers the recompute on culture changes.
-        return new LinguaFormatBuilder(formatKey.Manager, format, subscribeCultureChanges: false);
+        return new LinguaFormatBuilder(formatKey.Manager, format);
     }
 
     /// <summary>
@@ -81,8 +72,7 @@ public static class LinguaFormatExtensions
     /// </param>
     /// <remarks>
     /// For templates that come from the manager's own resources, prefer
-    /// <see cref="CreateFormat(LinguaKey)"/> — it starts from the template key and
-    /// avoids a redundant culture subscription.
+    /// <see cref="CreateFormat(LinguaKey)"/> to start directly from the template key.
     /// </remarks>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="manager"/> or <paramref name="format"/> is <c>null</c>.
@@ -94,7 +84,7 @@ public static class LinguaFormatExtensions
         ArgumentNullException.ThrowIfNull(manager);
         ArgumentNullException.ThrowIfNull(format);
 
-        return new LinguaFormatBuilder(manager, format, subscribeCultureChanges: true);
+        return new LinguaFormatBuilder(manager, format);
     }
 
     /// <summary>
@@ -126,7 +116,6 @@ public static class LinguaFormatExtensions
 
         return new LinguaFormatBuilder(
             manager,
-            LinguaObservableString.FromLiteral(format),
-            subscribeCultureChanges: true);
+            LinguaObservableString.FromLiteral(format));
     }
 }

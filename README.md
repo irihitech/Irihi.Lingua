@@ -293,7 +293,7 @@ private readonly LinguaFormatObservable _stampText =
 private void Refresh() => _stampText.Refresh();
 ```
 
-Observable arguments are push-only — `Refresh()` does not re-read them; constants are fixed at build time. The built observable behaves like a behavior subject: subscribing immediately emits the current formatted string, and every subsequent change re-emits a recomputed value — whenever the format template changes (e.g. because the active culture changed), whenever a live argument changes, or (for custom template sources) whenever the manager's active culture changes. Formatting always uses the manager's `CurrentCulture` — not the thread culture — so numbers and dates stay consistent with the selected language even when the template text falls back to the default culture.
+Observable arguments are push-only — `Refresh()` does not re-read them; constants are fixed at build time. The built observable behaves like a behavior subject: subscribing immediately emits the current formatted string, and every subsequent change re-emits a recomputed value — whenever the format template changes, a live argument changes, or the manager's active culture changes. Formatting uses the manager's `CurrentCulture`, so numbers and dates follow the selected language even when the resource variant omits the template key. Notifications are serialized; updates and subscriptions initiated from an observer callback are delivered after the current notification completes.
 
 `Arg` has four overloads, one per argument kind:
 
@@ -310,7 +310,7 @@ LinguaManager.Instance.CreateFormat("Page {0} of {1}")
     .Build();
 ```
 
-`CreateFormat` also accepts an `IObservable<string?>` template source (e.g. `LinguaObservableString.FromLiteral` or a template composed at runtime). For templates that come from the manager's own resources, prefer `Keys.X.CreateFormat()` — it avoids a redundant culture subscription.
+`CreateFormat` also accepts an `IObservable<string?>` template source (e.g. `LinguaObservableString.FromLiteral` or a template composed at runtime). For templates that come from the manager's own resources, use `Keys.X.CreateFormat()` to start directly from the resource key.
 
 ### CulturePicker — built-in culture switcher
 
