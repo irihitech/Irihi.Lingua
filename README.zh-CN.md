@@ -1,393 +1,47 @@
 # Irihi.Lingua
 
-[English](README.md) | 中文
+[English](https://github.com/irihitech/Irihi.Lingua/blob/main/README.md) | 中文
 
 [![NuGet](https://img.shields.io/nuget/v/Irihi.Lingua)](https://www.nuget.org/packages/Irihi.Lingua)
 
-Irihi.Lingua 是一个 C# 源生成器，可以将 `.resx` 或 `.json` 资源文件转换为强类型、响应式的 Avalonia i18n 管理器。
-每个资源键都会变成一个 `IObservable<string?>` 属性，当当前文化切换时自动推送新值，无需手动编写 `INotifyPropertyChanged`。
-
-## 特别致谢
-
-特别感谢 [`sylinko/everywhere`](https://github.com/sylinko/everywhere)，本项目的灵感来源于它。
+将 `.resx` 和 `.json` 资源生成强类型、可观察的 Avalonia 本地化字符串。
+切换当前文化，即可更新 XAML 和 C# 中的本地化文本。
 
 ## 亮点
 
-- 支持 NativeAOT（[原生可执行文件验证](test/Irihi.Lingua.AotSmoke/README.md)）。
-- 为 Avalonia 设计并优化。
-- 可同时在 XAML 和 ViewModel 中使用。
-- 去中心化的 i18n 管理方式：你可以在不同的类中定义独立的资源管理器，并按功能、模块、页面或任意你希望的边界来划分资源粒度。
-- 同时支持 `.resx`（XML）和 `.json` 两种资源格式。
+- 为 Avalonia 设计，支持流绑定和翻译标记扩展。
+- 按功能、模块或页面定义独立的语言管理器。
+- 支持常量、可观察对象、属性和计算型参数的响应式格式化。
+- 支持 NativeAOT，已在 Windows、Linux x64 上验证 .NET 8 和 .NET 10。
 
 ## 安装
 
-将 NuGet 包添加到你的项目中：
-
 ```xml
-<PackageReference Include="Irihi.Lingua" />
+<PackageReference Include="Irihi.Lingua" Version="1.1.0" />
 ```
 
-该包同时包含运行时库和 Roslyn 源生成器，不需要单独添加 analyzer 引用。
+包内已包含运行时库和 Roslyn 源生成器。
 
-## 快速开始
+## 文档
 
-### 1. 创建你的 `.resx` 文件
+初次使用请从[快速开始](https://github.com/irihitech/Irihi.Lingua/blob/main/docs/zh-CN/getting-started.md)入手，也可以浏览[中英文文档目录](https://github.com/irihitech/Irihi.Lingua/blob/main/docs/README.md)。
 
-先创建一个基础资源文件，再为你需要支持的每种文化创建一个文件。
-文化版本文件必须遵循 `<BaseName>.<culture>.resx` 的命名约定。
-
-`Resources/Strings.resx`（默认 / 不变文化）：
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<root>
-  <data name="App_Title" xml:space="preserve">
-    <value>My Application</value>
-  </data>
-  <data name="Greeting_Message" xml:space="preserve">
-    <value>Hello!</value>
-  </data>
-</root>
-```
-
-`Resources/Strings.zh-Hans.resx`（简体中文）：
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<root>
-  <data name="App_Title" xml:space="preserve">
-    <value>我的应用程序</value>
-  </data>
-  <data name="Greeting_Message" xml:space="preserve">
-    <value>你好！</value>
-  </data>
-</root>
-```
-
-### 2. 将资源文件作为 `AdditionalFiles` 添加
-
-生成器会读取项目文件中列出的所有 `.resx` `AdditionalFiles`。
-你可以逐个添加，也可以使用通配符把某个文件夹下的所有资源文件一起加入。
-
-```xml
-<ItemGroup>
-  <AdditionalFiles Include="Resources\Strings.resx" />
-  <AdditionalFiles Include="Resources\Strings.zh-Hans.resx" />
-
-  <!-- 或者包含 Resources 下所有 .resx 文件 -->
-  <AdditionalFiles Include="Resources\**\*.resx" />
-</ItemGroup>
-```
-
-### 3. 声明语言管理器
-
-将 `[LinguaManager]` 应用于一个 `partial class`，并指向基础 `.resx` 文件。
-源生成器会在构建时补全剩余代码。
-类名完全由你自己决定，而且在一个应用中定义多少个 `[LinguaManager]` 类都可以——全部由你控制。
-
-```csharp
-[LinguaManager("./Resources/Strings.resx")]
-public partial class LanguageManager;
-```
-
-### 4. 订阅响应式字符串
-
-每个资源键都会以 `IObservable<string?>` 属性的形式暴露在单例 `Instance` 上。
-订阅者会立即收到当前值（行为主体语义），之后每次更新都会继续收到通知。
-
-```csharp
-using System.Globalization;
-
-// 订阅后会立即收到当前值
-using var titleSub = LanguageManager.Instance.App_Title.Subscribe(
-    title => Console.WriteLine($"Title: {title}"));
-
-using var greetingSub = LanguageManager.Instance.Greeting_Message.Subscribe(
-    msg => Console.WriteLine($"Greeting: {msg}"));
-```
-
-### 5. 切换当前文化
-
-随时调用 `UpdateCulture`，即可向所有活动订阅者推送新值。
-该方法会沿着文化层级查找（例如 `zh-Hans-CN` → `zh-Hans` → 不变文化），直到找到匹配的资源文件。
-
-```csharp
-// 切换到简体中文
-LanguageManager.Instance.UpdateCulture(new CultureInfo("zh-Hans"));
-
-// 恢复为默认（不变）文化
-LanguageManager.Instance.UpdateCulture(CultureInfo.InvariantCulture);
-```
-
-## JSON 源文件格式
-
-除了 `.resx` 之外，**`.json` 文件也同样支持**。  
-只需将 `[LinguaManager]` 指向一个 `.json` 文件——文件扩展名会自动告诉生成器使用哪种格式。
-
-### 嵌套对象扁平化
-
-嵌套的 JSON 对象会被**扁平化为以下划线分隔的属性名**。  
-只有类型为 `string` 的叶子值才会成为资源键——数字、布尔值和 `null` 会被忽略。
-
-`Resources/Strings.json`：
-```json
-{
-  "a": "Content A",
-  "b": "Content B",
-  "c": {
-    "x": "Content X",
-    "y": "Content Y",
-    "z": {
-      "m": "Content M",
-      "n": "Content N"
-    }
-  }
-}
-```
-
-生成的属性：`a`、`b`、`c_x`、`c_y`、`c_z_m`、`c_z_n`
-
-### 文化变体
-
-文化特定的 JSON 文件遵循与 `.resx` 相同的 `<BaseName>.<culture>.json` 命名约定：
-
-```
-Resources/Strings.json              ← 默认 / 不变文化
-Resources/Strings.zh-Hans.json      ← 简体中文
-```
-
-### 注册
-
-将 JSON 文件作为 `AdditionalFiles` 与 `.resx` 文件一同添加：
-
-```xml
-<ItemGroup>
-  <AdditionalFiles Include="Resources\Strings.json" />
-  <AdditionalFiles Include="Resources\Strings.zh-Hans.json" />
-
-  <!-- 或者包含所有 .json 文件 -->
-  <AdditionalFiles Include="Resources\**\*.json" />
-</ItemGroup>
-```
-
-### 声明管理器
-
-为 JSON 资源单独创建一个管理器类（也可以完全替换掉 `.resx` 管理器）：
-
-```csharp
-[LinguaManager("./Resources/Strings.json")]
-public partial class JsonLanguageManager;
-```
-
-### 使用方式
-
-生成的 API 完全相同——`Instance`、`UpdateCulture`、`Keys` 和可观察属性用法一致：
-
-```csharp
-// { "app": { "title": "Hello" } } → app_title
-using var sub = JsonLanguageManager.Instance.app_title.Subscribe(
-    t => Console.WriteLine(t));
-
-JsonLanguageManager.Instance.UpdateCulture(new CultureInfo("zh-Hans"));
-```
-
-### RESX 与 JSON 混用
-
-你可以定义任意多个 `[LinguaManager]` 类——一个项目可以同时使用 `.resx` 和 `.json` 管理器，各自拥有独立的资源文件。两个生成器独立运行，产生完全分离的输出类型。
-
----
-
-## Avalonia 用法
-
-### ViewModel + 流绑定（`^`）
-
-将视图模型中的响应式字符串属性暴露出来，并在 XAML 中使用 `^` 流绑定操作符进行绑定。
-
-```csharp
-public class MainWindowViewModel
-{
-    public IObservable<string?> AppTitle       => LanguageManager.Instance.App_Title;
-    public IObservable<string?> GreetingMessage => LanguageManager.Instance.Greeting_Message;
-}
-```
-
-```xml
-<TextBlock Text="{Binding AppTitle^}" />
-<TextBlock Text="{Binding GreetingMessage^}" />
-```
-
-### `TranslateExtension` 标记扩展
-
-如果你不想通过 ViewModel 包装，也可以直接使用 `Translate` 标记扩展，并配合生成的 `Keys` 嵌套类。
-
-`TranslateExtension` 已通过 `XmlnsDefinition` 注册到标准 Avalonia XML 命名空间（`https://github.com/avaloniaui`），因此无需额外声明该命名空间。
-只需要为包含 `LanguageManager` 的命名空间添加一个 `local:` 别名：
-
-```xml
-xmlns="https://github.com/avaloniaui"
-xmlns:local="using:YourAppNamespace"
-```
-
-然后这样使用：
-```xml
-<TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.App_Title}}" />
-<TextBlock Text="{Translate {x:Static local:LanguageManager+Keys.Greeting_Message}}" />
-```
-
-该扩展会从 `Keys` 类中解析 `LinguaKey`，查找对应的 `IObservable<string?>`，并将其转换为 Avalonia 绑定，使其在文化变化时自动更新。
-
-### `FormatTranslateExtension` 标记扩展
-
-当资源值是格式化字符串（例如 `"Page {0} {1}"`），并且你希望把本地化文本与动态值组合时，可以使用 `FormatTranslateExtension`（在 XAML 中简写为 `FormatTranslate`）。
-
-`FormatKey` 指向格式模板，内部的 `TranslateEntry` 按顺序提供参数：
-
-- `TranslateEntry Key="..."`：把另一个本地化资源键作为参数。
-- `TranslateEntry Binding="..."`：把普通 Avalonia 绑定结果作为参数。
-
-```xml
-<TextBlock>
-    <TextBlock.Text>
-        <FormatTranslate FormatKey="{x:Static local:LanguageManager+Keys.Page_Template}">
-            <TranslateEntry Binding="{Binding #page.Value}" />
-            <TranslateEntry Key="{x:Static local:LanguageManager+Keys.Greeting_Message}" />
-        </FormatTranslate>
-    </TextBlock.Text>
-</TextBlock>
-```
-
-在这个示例中，`{0}` 来自 `#page.Value`，`{1}` 来自 `Greeting_Message`。
-当当前文化变化，或任意参数绑定值变化时，最终文本都会自动重新计算。
-
-格式化使用所属 manager 的当前文化（通过内部附加的绑定传给转换器），因此数字和日期参数会跟随所选语言，而不是线程文化。
-
-### 在 C# 代码中格式化（`Format`）
-
-`FormatTranslate` 在代码侧的对应物是流式的 `Format` 构建器：从格式模板键开始，用 `Arg` 逐个链上参数：
-
-```csharp
-public class MainWindowViewModel : INotifyPropertyChanged
-{
-    // Page 与 TotalPages 会触发 PropertyChanged ...
-
-    public IObservable<string?> PageText =>
-        LanguageManager.Keys.Page_Template.CreateFormat()
-            .Arg(this, nameof(Page), s => s.Page)
-            .Arg(this, nameof(TotalPages), s => s.TotalPages)
-            .Build();
-}
-```
-
-在 XAML 中像其他 Lingua 可观察对象一样绑定：
-
-```xml
-<TextBlock Text="{Binding PageText^}" />
-```
-
-`Build()` 把链合成为最终的可观察对象（`LinguaFormatObservable`，它本身就是 `IObservable<string?>`），并额外提供 `Refresh()`：重读所有可拉取的参数（活属性与计算型读取器）、按 manager 当前 culture 重算、即使结果不变也强制通知订阅者——非常适合刷新按钮场景：
-
-```csharp
-private readonly LinguaFormatObservable _stampText =
-    manager.CreateFormat("Total {0}").Arg(() => _service.GetLiveTotal()).Build();
-
-private void Refresh() => _stampText.Refresh();
-```
-
-可观察对象参数是纯推送的——`Refresh()` 不会重读它们；常量在构建时固化。合成后的可观察对象具有 BehaviorSubject 语义：订阅时立即发出当前格式化结果，之后在以下任一情况发生时重新发出：格式模板变化、任一活参数变化，或 manager 的当前文化变化。格式化使用 manager 的 `CurrentCulture`，因此即使资源变体缺少模板键，数字和日期的格式也会跟随所选语言。通知按顺序串行发送；在观察者回调中触发的更新和新订阅，会在当前通知完成后送达。
-
-`Arg` 有四个重载，对应四种参数：
-
-- `Arg(常量)` —— 固定值；
-- `Arg(可观察对象)` —— 任意 `IObservable<T>`；值类型（如 ReactiveUI 的 `WhenAnyValue`）自动装箱，无需适配；
-- `Arg(源, 属性名, 读取器)` —— 活属性：组合器直接订阅源的 `PropertyChanged` 事件并通过 getter 委托重新读取属性 —— 不使用反射、不使用表达式树，对裁剪和 NativeAOT 友好。属性被设置为相同值时不会重新发出（相同的格式化结果会被抑制），并支持 `PropertyChanged` 以空或 null 名称表示"所有属性可能已变化"的约定；
-- `Arg(读取器)` —— 计算型、按需读取的值：首次订阅时读取一次，之后在每次 `Refresh()` 时重读。源不需要实现 `INotifyPropertyChanged`——适合普通属性或没有变更通知的外部状态。
-
-使用自定义或常量模板时，用 `CreateFormat` 从 manager 侧开始链：
-
-```csharp
-LinguaManager.Instance.CreateFormat("Page {0} of {1}")
-    .Arg(this, nameof(Page), s => s.Page)
-    .Build();
-```
-
-`CreateFormat` 也接受 `IObservable<string?>` 模板源（如 `LinguaObservableString.FromLiteral` 或运行时组合的模板）。模板来自 manager 自身资源时，可用 `Keys.X.CreateFormat()` 直接从资源键开始。
-
-### CulturePicker — 内置文化切换控件
-
-`CulturePicker` 是一个 `TemplatedControl`，提供开箱即用的 `ComboBox` 用于切换文化。
-它可以驱动一个或多个 `ILinguaManager` 实例，并暴露 `CultureChanged` 路由事件。
-
-> **注意：** 控件的模板定义在 `Themes/Generic.axaml` 中。必须在 `App.axaml` 中引入主题样式，否则控件将显示为空白：
->
-> ```xml
-> <Application.Styles>
->     <StyleInclude Source="avares://Irihi.Lingua.Core/Themes/Generic.axaml" />
-> </Application.Styles>
-> ```
-
-#### 通过 Binding 使用
-
-```xml
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:lingua="https://irihi.tech/lingua">
-
-    <lingua:CulturePicker Managers="{Binding Managers}"
-                          Cultures="{Binding Cultures}" />
-</Window>
-```
-
-```csharp
-public class MainWindowViewModel
-{
-    public IList<ILinguaManager> Managers { get; } = new List<ILinguaManager>
-    {
-        LanguageManager.Instance,
-        JsonLanguageManager.Instance
-    };
-
-    public IList<LinguaCulture> Cultures { get; } = new List<LinguaCulture>
-    {
-        new() { Culture = CultureInfo.InvariantCulture, DisplayName = "English", ShortDisplayName = "EN" },
-        new() { Culture = new CultureInfo("zh-Hans"), DisplayName = "Chinese (Simplified)", ShortDisplayName = "中文" }
-    };
-}
-```
-
-#### XAML 内联定义
-
-Culture 也可以直接在 XAML 中定义——`LinguaCulture` 带有 `[Content]` 属性和 `TypeConverter`，因此可以直接将文化名称作为内部文本：
-
-```xml
-<lingua:CulturePicker Managers="{Binding Managers}">
-    <lingua:CulturePicker.Cultures>
-        <lingua:LinguaCulture DisplayName="English" ShortDisplayName="EN">en</lingua:LinguaCulture>
-        <lingua:LinguaCulture DisplayName="简体中文" ShortDisplayName="中文">zh-Hans</lingua:LinguaCulture>
-    </lingua:CulturePicker.Cultures>
-</lingua:CulturePicker>
-```
-
-#### CultureChanged 事件
-
-```xml
-<lingua:CulturePicker CultureChanged="OnCultureChanged" />
-```
-
-```csharp
-private void OnCultureChanged(object? sender, CultureChangedEventArgs e)
-{
-    Console.WriteLine($"已切换到 {e.Culture?.DisplayText}");
-}
-```
-
-| 属性 | 类型 | 说明 |
-|---|---|---|
-| `Managers` | `IList<ILinguaManager>?` | 要驱动的一个或多个管理器 |
-| `Cultures` | `IList<LinguaCulture>?` | 可选文化列表 |
-| `SelectedItem` | `LinguaCulture?` | 当前选中的文化 |
-| `CultureChanged` | `RoutedEvent<CultureChangedEventArgs>` | 选中项变化时触发 |
-
-| `LinguaCulture` 属性 | 说明 |
+| 指南 | 内容 |
 |---|---|
-| `CultureName`（Content） | 文化标识符字符串（例如 `"zh-Hans"`） |
-| `DisplayName` | 下拉列表中显示的完整名称 |
-| `ShortDisplayName` | 选中框中显示的简洁名称 |
-| `DisplayText` | 只读：`DisplayName ?? NativeName` |
-| `SelectionDisplayText` | 只读：`ShortDisplayName ?? DisplayText` |
+| [快速开始](https://github.com/irihitech/Irihi.Lingua/blob/main/docs/zh-CN/getting-started.md) | RESX 资源、管理器生成、订阅与文化切换 |
+| [JSON 资源](https://github.com/irihitech/Irihi.Lingua/blob/main/docs/zh-CN/json-resources.md) | 嵌套键、文化变体及资源格式混用 |
+| [Avalonia 绑定](https://github.com/irihitech/Irihi.Lingua/blob/main/docs/zh-CN/avalonia-bindings.md) | ViewModel 流绑定和 Translate 标记扩展 |
+| [格式化](https://github.com/irihitech/Irihi.Lingua/blob/main/docs/zh-CN/formatting.md) | FormatTranslate、CreateFormat、动态参数与 Refresh |
+| [CulturePicker](https://github.com/irihitech/Irihi.Lingua/blob/main/docs/zh-CN/culture-picker.md) | 主题安装、文化列表、绑定与事件 |
+
+## 示例与验证
+
+- [Avalonia 示例](https://github.com/irihitech/Irihi.Lingua/tree/main/demo/Irihi.Lingua.AvaloniaDemo)
+- [控制台示例](https://github.com/irihitech/Irihi.Lingua/tree/main/demo/Irihi.Lingua.Demo)
+- [NativeAOT 验证](https://github.com/irihitech/Irihi.Lingua/blob/main/test/Irihi.Lingua.AotSmoke/README.md)
+
+## 特别致谢
+
+本项目的灵感来自 [sylinko/everywhere](https://github.com/sylinko/everywhere)。
+
+[MIT 许可证](https://github.com/irihitech/Irihi.Lingua/blob/main/LICENSE)
