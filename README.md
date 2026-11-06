@@ -2,6 +2,10 @@
 
 English | [中文](https://github.com/irihitech/Irihi.Lingua/blob/main/README.zh-CN.md)
 
+<p align="center">
+    <img src="./assets/lingua-logo.svg" alt="Lingua logo" height="64" />
+</p>
+
 [![NuGet](https://img.shields.io/nuget/v/Irihi.Lingua)](https://www.nuget.org/packages/Irihi.Lingua)
 
 Turn `.resx` and `.json` resources into strongly typed, observable strings for Avalonia.
