@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 720 720">
+  <style>
+    .lingua-teal5 { fill: #00B3A1; }
+    .navy { fill: #002C6B; }
+    @media (prefers-color-scheme: dark) {
+      .lingua-teal5 { fill: #33C2B0; }
+      .navy { fill: #EFF8FF; }
+    }
+  </style>
+  <path class="lingua-teal5" d="M612 216H648A72 72 0 0 1 720 288V720L504 612H288A72 72 0 0 1 216 540H252A36 36 0 0 0 288 576H648A36 36 0 0 0 684 540V288A36 36 0 0 0 648 252H612Z" fill-rule="nonzero"/>
+  <path class="navy" d="M0 0H504A72 72 0 0 1 576 72V432A72 72 0 0 1 504 504H216L0 720V72A72 72 0 0 1 72 0ZM72 36H504A36 36 0 0 1 540 72V432A36 36 0 0 1 504 468H72A36 36 0 0 1 36 432V72A36 36 0 0 1 72 36Z" fill-rule="evenodd"/>
+  <path class="navy" d="M144 108H432V180H288V252H216V396H144ZM288 252H360V324H288ZM360 324H432V396H360Z" fill-rule="nonzero"/>
+</svg>

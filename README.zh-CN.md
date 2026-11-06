@@ -2,6 +2,10 @@
 
 [English](https://github.com/irihitech/Irihi.Lingua/blob/main/README.md) | 中文
 
+<p align="center">
+    <img src="./assets/lingua-logo.svg" alt="Lingua logo" height="64" />
+</p>
+
 [![NuGet](https://img.shields.io/nuget/v/Irihi.Lingua)](https://www.nuget.org/packages/Irihi.Lingua)
 
 将 `.resx` 和 `.json` 资源生成强类型、可观察的 Avalonia 本地化字符串。
