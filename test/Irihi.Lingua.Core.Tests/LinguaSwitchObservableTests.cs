@@ -177,6 +177,221 @@ public class LinguaSwitchObservableTests
     }
 
     [Fact]
+    public void SubscribeDuringAttachment_ReceivesInitialValueExactlyOnce()
+    {
+        var source = new TrackingSource("A");
+        var text = new LinguaSwitchObservable(source);
+        var first = new List<string?>();
+        var second = new List<string?>();
+        IDisposable? nested = null;
+        source.DuringSubscribe = () => nested = text.Subscribe(new Observer(second.Add));
+
+        try
+        {
+            using var subscription = text.Subscribe(new Observer(first.Add));
+            source.Push("B");
+
+            Assert.Equal(new[] { "A", "B" }, first);
+            Assert.Equal(first, second);
+        }
+        finally
+        {
+            nested?.Dispose();
+        }
+    }
+
+    [Theory]
+    [InlineData("subscribe")]
+    [InlineData("switch")]
+    [InlineData("unsubscribe")]
+    public async Task ConcurrentFormattedUpdate_UpstreamLifecycleDoesNotHoldContainerGate(string operation)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var manager = new FakeLinguaManager()
+            .Add(CultureInfo.InvariantCulture, ("Count", "Items: {0}"));
+        var count = new LinguaObservable<int>("", 1);
+        var formatted = manager.Keys("Count").CreateFormat().Arg(count).Build();
+        using var updateEntered = new ManualResetEventSlim();
+        using var releaseUpdate = new ManualResetEventSlim();
+        // This observer pauses delivery while the formatter holds its own gate,
+        // before it calls into the switch container on the update thread.
+        using var formatterSubscription = formatted.Subscribe(new Observer(value =>
+        {
+            if (value != "Items: 2")
+                return;
+            updateEntered.Set();
+            Assert.True(releaseUpdate.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+        }));
+        var wrapped = new LifecycleSource(formatted);
+        var idle = LinguaObservableString.FromLiteral("Idle");
+        var text = new LinguaSwitchObservable(operation == "subscribe" ? idle : wrapped);
+        var received = new List<string?>();
+        using var subscription = text.Subscribe(new Observer(received.Add));
+
+        void BeforeOperation()
+        {
+            wrapped.BeforeSubscribe = null;
+            wrapped.BeforeDispose = null;
+            // A bounded probe detects the gate inversion without hanging the
+            // test process if upstream code is called under the container gate.
+            var read = Task.Factory.StartNew(() => text.Source, cancellationToken,
+                TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            try
+            {
+                Assert.True(read.Wait(TimeSpan.FromSeconds(5), cancellationToken),
+                    "Upstream Subscribe/Dispose must run outside the container gate.");
+            }
+            finally
+            {
+                releaseUpdate.Set();
+            }
+        }
+
+        wrapped.BeforeSubscribe = BeforeOperation;
+        wrapped.BeforeDispose = BeforeOperation;
+        var update = Task.Run(() => count.OnNext(2), cancellationToken);
+        Task? mutation = null;
+        try
+        {
+            Assert.True(updateEntered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            mutation = Task.Factory.StartNew(() =>
+            {
+                if (operation == "subscribe")
+                    text.Source = wrapped;
+                else if (operation == "switch")
+                    text.Source = idle;
+                else
+                    subscription.Dispose();
+            }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            await Task.WhenAll(update, mutation).WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+        }
+        finally
+        {
+            releaseUpdate.Set();
+            wrapped.BeforeSubscribe = null;
+            wrapped.BeforeDispose = null;
+            await Task.WhenAll(update, mutation ?? Task.CompletedTask)
+                .WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+        }
+
+        var expected = operation switch
+        {
+            "subscribe" => new[] { "Idle", "Items: 2" },
+            "switch" => new[] { "Items: 1", "Idle" },
+            _ => new[] { "Items: 1" }
+        };
+        Assert.Equal(expected, received);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ObserverCallback_CanSwitchOrUnsubscribeWithoutHoldingContainerGate(bool unsubscribe)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var source = new TrackingSource("A");
+        var text = new LinguaSwitchObservable(source);
+        IDisposable? subscription = null;
+        source.DuringDispose = () =>
+        {
+            var read = Task.Factory.StartNew(() => text.Source, cancellationToken,
+                TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            Assert.True(read.Wait(TimeSpan.FromSeconds(5), cancellationToken),
+                "Observer callbacks must run outside the container gate too.");
+        };
+        subscription = text.Subscribe(new Observer(value =>
+        {
+            if (value != "B")
+                return;
+            if (unsubscribe)
+                subscription!.Dispose();
+            else
+                text.Source = LinguaObservableString.FromLiteral("C");
+        }));
+        using (subscription)
+            source.Push("B");
+
+        Assert.Equal(0, source.ActiveCount);
+    }
+
+    [Fact]
+    public async Task ConcurrentSwitch_DuringBlockedSubscribe_DisposesLateHandle()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var first = new TrackingSource("A");
+        var second = new TrackingSource("B");
+        var text = new LinguaSwitchObservable(first);
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        first.DuringSubscribe = () =>
+        {
+            entered.Set();
+            Assert.True(release.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+        };
+        var received = new List<string?>();
+        var attaching = Task.Run(() => text.Subscribe(new Observer(received.Add)), cancellationToken);
+        Task? switching = null;
+        try
+        {
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            switching = Task.Run(() => text.Source = second, cancellationToken);
+            await switching.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+        }
+        finally
+        {
+            release.Set();
+            // Dispose even if an assertion above fails, so the regression cannot
+            // leave its eventual subscription connected.
+            using var cleanup = await attaching.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+            if (switching is not null)
+                await switching.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+        }
+
+        Assert.Equal(new[] { "B" }, received);
+        Assert.Equal(0, first.ActiveCount);
+        Assert.Equal(0, second.ActiveCount);
+    }
+
+    [Fact]
+    public async Task ConcurrentSwitch_DuringNotification_PreservesOrderForAllObservers()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var source = LinguaObservableString.FromLiteral("A");
+        var text = new LinguaSwitchObservable(source);
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var first = new List<string?>();
+        var second = new List<string?>();
+        using var a = text.Subscribe(new Observer(value =>
+        {
+            if (value == "A2")
+            {
+                entered.Set();
+                Assert.True(release.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            }
+            first.Add(value);
+        }));
+        using var b = text.Subscribe(new Observer(second.Add));
+        var updating = Task.Run(() => source.OnNext("A2"), cancellationToken);
+        Task? switching = null;
+        try
+        {
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            switching = Task.Run(() => text.Source = LinguaObservableString.FromLiteral("B"), cancellationToken);
+            await switching.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+        }
+        finally
+        {
+            release.Set();
+            await Task.WhenAll(updating, switching ?? Task.CompletedTask)
+                .WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+        }
+
+        Assert.Equal(new[] { "A", "A2", "B" }, first);
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
     public void SameObserverSubscribedTwice_HasIndependentSubscriptions()
     {
         var source = LinguaObservableString.FromLiteral("A");
@@ -341,6 +556,23 @@ public class LinguaSwitchObservableTests
             value = next;
             foreach (var observer in _observers.ToArray())
                 observer.OnNext(next);
+        }
+    }
+
+    private sealed class LifecycleSource(IObservable<string?> source) : IObservable<string?>
+    {
+        public Action? BeforeSubscribe { get; set; }
+        public Action? BeforeDispose { get; set; }
+
+        public IDisposable Subscribe(IObserver<string?> observer)
+        {
+            BeforeSubscribe?.Invoke();
+            var subscription = source.Subscribe(observer);
+            return new Cleanup(() =>
+            {
+                BeforeDispose?.Invoke();
+                subscription.Dispose();
+            });
         }
     }
 

@@ -26,7 +26,8 @@ namespace Irihi.Lingua;
 /// </remarks>
 public sealed class LinguaSwitchObservable : IObservable<string?>
 {
-    // Monitor permits synchronous source emissions to reenter during Subscribe.
+    // This gate protects state only. Never call upstream or downstream code
+    // while holding it: a formatted source has its own notification gate.
     private readonly object _gate = new();
     private readonly Queue<(ObserverSubscription[] Observers, string? Value)> _notifications = new();
     private IObservable<string?> _source;
@@ -58,17 +59,21 @@ public sealed class LinguaSwitchObservable : IObservable<string?>
         set
         {
             ArgumentNullException.ThrowIfNull(value);
+            IDisposable? previous;
             lock (_gate)
             {
                 if (ReferenceEquals(_source, value) && (_active is not null || _observers.Length == 0))
                     return;
 
                 _source = value;
-                DetachCore();
-                // Disposing the old source can reenter and attach a newer selection.
-                if (_observers.Length > 0 && _active is null)
-                    AttachCore();
+                previous = DetachCore();
             }
+
+            previous?.Dispose();
+            // Disposal can reenter and select another source. Attach only the
+            // current selection, and only if nobody has already attached it.
+            AttachCurrent();
+            DrainNotifications();
         }
     }
 
@@ -83,43 +88,68 @@ public sealed class LinguaSwitchObservable : IObservable<string?>
         lock (_gate)
         {
             _observers = [.. _observers, subscription];
-            try
-            {
-                if (_active is null)
-                    AttachCore();
-                else if (_hasValue)
-                    NotifyCore([subscription], _value);
-            }
-            catch
-            {
-                subscription.Dispose();
-                throw;
-            }
+            // During attachment, the final priming broadcast includes this
+            // subscriber. Replaying here would deliver the initial value twice.
+            if (_active is { Initializing: false } && _hasValue)
+                _notifications.Enqueue(([subscription], _value));
+        }
+        try
+        {
+            AttachCurrent();
+            DrainNotifications();
+        }
+        catch
+        {
+            subscription.Dispose();
+            throw;
         }
         return subscription;
     }
 
-    private void AttachCore()
+    private void AttachCurrent()
     {
-        var active = new SourceObserver(this);
-        _active = active;
+        SourceObserver active;
+        IObservable<string?> source;
+        lock (_gate)
+        {
+            if (_active is not null || _observers.Length == 0)
+                return;
+
+            source = _source;
+            active = new SourceObserver(this);
+            _active = active;
+        }
+
+        IDisposable subscription;
         try
         {
-            // The source can synchronously call back (and even be replaced)
-            // before returning its subscription. The observer owns that handle
-            // so a handle returned after detachment is still disposed.
-            active.SetSubscription(_source.Subscribe(active));
+            subscription = source.Subscribe(active);
         }
         catch
         {
-            if (ReferenceEquals(_active, active))
-                DetachCore();
+            lock (_gate)
+            {
+                if (ReferenceEquals(_active, active))
+                    DetachCore();
+            }
             throw;
         }
 
-        active.Initializing = false;
-        if (ReferenceEquals(_active, active) && _hasValue)
-            NotifyCore(_observers, _value);
+        lock (_gate)
+        {
+            if (ReferenceEquals(_active, active))
+            {
+                active.Subscription = subscription;
+                active.Initializing = false;
+                if (_hasValue)
+                    _notifications.Enqueue((_observers, _value));
+                return;
+            }
+        }
+
+        // The source was replaced or the last observer left before Subscribe
+        // returned. Dispose its late handle without touching the new selection.
+        subscription.Dispose();
     }
 
     private void OnValue(SourceObserver source, string? value)
@@ -133,75 +163,81 @@ public sealed class LinguaSwitchObservable : IObservable<string?>
             _value = value;
             _hasValue = true;
             if (!source.Initializing)
-                NotifyCore(_observers, value);
+                _notifications.Enqueue((_observers, value));
         }
+        DrainNotifications();
     }
 
-    private void NotifyCore(ObserverSubscription[] observers, string? value)
+    private void DrainNotifications()
     {
-        _notifications.Enqueue((observers, value));
-        if (_notifying)
-            return;
+        lock (_gate)
+        {
+            if (_notifying || _notifications.Count == 0)
+                return;
+            _notifying = true;
+        }
 
-        _notifying = true;
         try
         {
-            while (_notifications.TryDequeue(out var notification))
+            while (true)
+            {
+                (ObserverSubscription[] Observers, string? Value) notification;
+                lock (_gate)
+                {
+                    if (!_notifications.TryDequeue(out notification))
+                    {
+                        _notifying = false;
+                        return;
+                    }
+                }
                 foreach (var observer in notification.Observers)
                     observer.OnNext(notification.Value);
+            }
         }
-        finally
+        catch
         {
-            _notifying = false;
-            _notifications.Clear();
+            lock (_gate)
+            {
+                _notifying = false;
+                _notifications.Clear();
+            }
+            throw;
         }
     }
 
     private void Unsubscribe(ObserverSubscription subscription)
     {
+        IDisposable? previous = null;
         lock (_gate)
         {
             _observers = _observers.Where(o => !ReferenceEquals(o, subscription)).ToArray();
             if (_observers.Length == 0)
-                DetachCore();
+                previous = DetachCore();
         }
+        previous?.Dispose();
     }
 
-    private void DetachCore()
+    // Invalidate before releasing the gate, then let the caller dispose outside it.
+    private IDisposable? DetachCore()
     {
-        var active = _active;
+        var subscription = _active?.Subscription;
+        if (_active is not null)
+            _active.Subscription = null;
         _active = null;
         _hasValue = false;
         _value = null;
-        active?.Dispose();
+        return subscription;
     }
 
-    private sealed class SourceObserver(LinguaSwitchObservable parent) : IObserver<string?>, IDisposable
+    private sealed class SourceObserver(LinguaSwitchObservable parent) : IObserver<string?>
     {
-        private IDisposable? _subscription;
-        private bool _disposed;
+        // Accessed only while holding the parent's state gate.
+        public IDisposable? Subscription { get; set; }
         public bool Initializing { get; set; } = true;
-
-        // All access is under the parent's gate, including synchronous callbacks.
-        public void SetSubscription(IDisposable subscription)
-        {
-            if (_disposed)
-                subscription.Dispose();
-            else
-                _subscription = subscription;
-        }
 
         public void OnNext(string? value) => parent.OnValue(this, value);
         public void OnCompleted() { }
         public void OnError(Exception error) { }
-
-        public void Dispose()
-        {
-            _disposed = true;
-            var subscription = _subscription;
-            _subscription = null;
-            subscription?.Dispose();
-        }
     }
 
     private sealed class ObserverSubscription(LinguaSwitchObservable parent, IObserver<string?> observer) : IDisposable

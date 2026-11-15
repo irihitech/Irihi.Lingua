@@ -71,8 +71,9 @@ For a custom source that does not emit immediately, it waits for the first value
 Until then, new subscribers do not receive cached text from the previous source;
 an existing UI retains its last displayed text. Source completion and errors do
 not terminate the container or prevent later switches, matching the formatting
-container's treatment of long-lived localization streams. Notifications run on
-the updating thread; change state and language on the UI thread when binding to UI.
+container's treatment of long-lived localization streams. Notifications are
+serialized without a UI dispatcher; concurrent and reentrant updates queue behind
+an ongoing notification. Change state and language on the UI thread when binding to UI.
 
 ## `TranslateExtension` markup extension
 
