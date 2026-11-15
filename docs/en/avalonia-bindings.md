@@ -28,6 +28,52 @@ Set the view's `DataContext` to your view model. For compiled bindings, declare 
 </Window>
 ```
 
+## Switch text sources with business state
+
+Use `LinguaSwitchObservable` to keep a stable binding object and replace its
+`Source` when business state changes. For example, assume the manager has `Start`
+and `Stop` resources:
+
+```csharp
+public class TaskViewModel
+{
+    public LinguaSwitchObservable ActionText { get; } =
+        new(LanguageManager.Instance.Start);
+
+    // Call when business state changes, for example from an IsRunning setter.
+    public void UpdateState(bool isRunning)
+    {
+        ActionText.Source = isRunning
+            ? LanguageManager.Instance.Stop
+            : LanguageManager.Instance.Start;
+    }
+}
+```
+
+```xml
+<Button Content="{Binding ActionText^}" />
+```
+
+Switching state unsubscribes the old source, subscribes the new one and immediately
+displays its current text. Subsequent language changes follow the selected resource.
+Switching back also picks up that resource's latest text in the current language.
+The `ActionText` instance stays the same, so changing its source does not require
+a `PropertyChanged` notification.
+
+`Source` accepts any `IObservable<string?>`, including
+`LinguaObservableString.FromLiteral(...)` and formatted streams created with
+`CreateFormat().Arg(...).Build()`. Assigning the same source instance does not
+resubscribe. A null source is rejected, but null text values are supported.
+
+The container connects to the source on its first subscription and disconnects
+when its last observer leaves. Multiple observers share one source subscription.
+For a custom source that does not emit immediately, it waits for the first value.
+Until then, new subscribers do not receive cached text from the previous source;
+an existing UI retains its last displayed text. Source completion and errors do
+not terminate the container or prevent later switches, matching the formatting
+container's treatment of long-lived localization streams. Notifications run on
+the updating thread; change state and language on the UI thread when binding to UI.
+
 ## `TranslateExtension` markup extension
 
 For direct XAML bindings without a view-model wrapper, use the `Translate` markup extension together with the generated `Keys` nested class.

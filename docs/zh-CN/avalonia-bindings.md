@@ -28,6 +28,44 @@ public class MainWindowViewModel
 </Window>
 ```
 
+## 根据业务状态切换文本源
+
+使用 `LinguaSwitchObservable` 保持绑定对象不变，在业务状态变化时替换它的 `Source`。
+例如，假设管理器包含 `Start` 和 `Stop` 两个资源：
+
+```csharp
+public class TaskViewModel
+{
+    public LinguaSwitchObservable ActionText { get; } =
+        new(LanguageManager.Instance.Start);
+
+    // 在业务状态变化时调用，例如从 IsRunning 属性的 setter 中调用。
+    public void UpdateState(bool isRunning)
+    {
+        ActionText.Source = isRunning
+            ? LanguageManager.Instance.Stop
+            : LanguageManager.Instance.Start;
+    }
+}
+```
+
+```xml
+<Button Content="{Binding ActionText^}" />
+```
+
+切换状态时，容器退订旧源、订阅新源，并立即显示新源的当前文本。
+此后切换语言，显示的文本跟随当前选中的资源更新；切回之前的状态时，也会拿到该资源在当前语言下的最新文本。
+`ActionText` 实例始终不变，因此不需要为文本源切换触发 `PropertyChanged`。
+
+`Source` 接受任何 `IObservable<string?>`，包括 `LinguaObservableString.FromLiteral(...)`
+和 `CreateFormat().Arg(...).Build()` 生成的格式化文本流。这样可以将不同状态的格式化文案接入同一个容器。
+赋回同一个源实例不会重新订阅，`null` 源不被允许，但源发出的文本可以为 `null`。
+
+容器在第一个观察者订阅时才连接源，最后一个观察者退订时自动断开，多个观察者共享一个源订阅。
+对不会立即发出值的自定义源，容器会等待其首次发出值；在此之前，新订阅者不会收到上一个源的缓存文本，已有 UI 则保留最后显示的文本。
+源的完成和错误通知不会终止容器，之后仍可切换源；这与格式化容器消费长期本地化流的方式一致。
+通知在触发更新的线程上传递，请在 UI 线程上更改业务状态和语言。
+
 ## `TranslateExtension` 标记扩展
 
 如果你不想通过 ViewModel 包装，也可以直接使用 `Translate` 标记扩展，并配合生成的 `Keys` 嵌套类。
